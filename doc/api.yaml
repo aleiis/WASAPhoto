@@ -1,0 +1,414 @@
+openapi: 3.0.3
+info:
+  title: WASAPhoto API
+  description: |
+    The WASAPhoto API interacts with a social image platform. Users can view a stream of photos in reverse chronological order, including upload timestamps, likes, and comments. This stream consists of images from users they follow.
+
+    Users can like and comment on images, with only comment authors able to delete their comments. Blocking users restricts their access to the blocker's information, with the option to unblock at any time.
+    
+    Each user has a profile displaying their photos, total uploads, followers, and following. Users can modify usernames, upload/delete photos, and follow/unfollow others.
+    
+    Deleting an image removes associated likes and comments.
+    
+    Users can search for profiles by username and log in using only their username.
+  contact:
+    name: Alejandro Ibáñez Pastrana
+    email: ibanezpastrana.2116832@studenti.uniroma1.it
+  version: 1.0.0
+servers: []
+paths:
+  /session:
+    post:
+      tags: ["login"]
+      summary: Logs in the user
+      description: |
+        If the user does not exist, it will be created, and an identifier is returned. If the user exists, the user identifier is returned.
+      operationId: doLogin
+      requestBody:
+        description: User details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/username'
+        required: true
+      responses:
+        '201':
+          description: User log-in action successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/userID'
+  /users/{userID}:
+    summary: User identified by a unique ID
+    parameters:
+      - $ref: '#/components/parameters/userID'
+    put:
+      tags: ["User"]
+      summary: Modifies the username of a user
+      description: |
+        The user can change their username. The new username must be unique.
+      operationId: setMyUserName
+      requestBody:
+        description: New username
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/username'
+        required: true
+      responses:
+        '200':
+          description: Username changed successfully
+        '400':
+          description: Username already exists
+        '404':
+          description: User not found
+
+    #
+    # TO-DO: Add the GET method to retrieve the user's profile
+    #
+
+    get:
+      tags: ["User"]
+      summary: Retrieves the user's profile
+      description: |
+        The user profile displays the user's photos, total uploads, followers, and following.
+      operationId: getUserProfile
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    $ref: '#/components/schemas/username'
+                  photos:
+                    type: array
+                    items:
+
+                      #
+                      # TO-DO: Add the photos schema
+                      #
+
+                  uploads:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                    example: 0
+                  followers:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                    example: 0
+                  following:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                    example: 0
+        '404':
+          description: User not found
+
+  /users/{userID}/stream:
+    summary: User's stream
+    parameters:
+      - $ref: '#/components/parameters/userID'
+
+    #
+    # TO-DO: Add the GET method to retrieve the user's stream
+    #
+
+    get:
+      tags: ["User"]
+      summary: Retrieves the user's stream
+      operationId: getMyStream
+      responses:
+        '200':
+          description: Stream retrieved successfully
+          content:
+            application/json:
+              schema:
+
+                #
+                # TO-DO: Add the stream schema
+                #
+
+
+  /users/{userID}/photos/:
+    summary: User's photos
+    parameters:
+      - $ref: '#/components/parameters/userID'
+    post:
+      tags: ["Photos"]
+      summary: Uploads a photo for the user
+      description: |
+        The user uploads a photo. The photo is stored in the user's profile.
+      operationId: uploadPhoto
+      requestBody:
+        description: Photo to upload
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+        required: true
+      responses:
+        '201':
+          description: Photo uploaded successfully
+        '404':
+          description: User not found
+  /users/{userID}/photos/{photoID}:
+    summary: User's photo identified by a unique ID
+    parameters:
+      - $ref: '#/components/parameters/userID'
+      - $ref: '#/components/parameters/photoID'
+    delete:
+      tags: ["Photos"]
+      summary: Deletes a photo
+      operationId: deletePhoto
+      responses:
+        '200':
+          description: Photo deleted successfully
+        '404':
+          description: Photo or user not found
+  /users/{userID}/follows/:
+    summary: Collection of users followed by the user
+    parameters:
+      - $ref: '#/components/parameters/userID'
+    post:
+      tags: ["Following"]
+      summary: Create a new follow
+      description: |
+        Lets the user follow another user.
+      operationId: followUser
+      requestBody:
+        description: ID of the user to follow
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/userID'
+        required: true
+      responses:
+        '201':
+          description: User followed successfully
+        '400':
+          description: User not found
+  /users/{userID}/follows/{followedID}:
+    summary: User follows another user
+    parameters:
+      - $ref: '#/components/parameters/userID'
+      - name: followedID
+        in: path
+        description: Identifier of the followed user
+        required: true
+        schema:
+          $ref: '#/components/schemas/userID'
+        example: 0
+    delete:
+      tags: ["Following"]
+      summary: Deletes a follow
+      description: |
+        Lets the user unfollow another user.
+      operationId: unfollowUser
+      responses:
+        '200':
+          description: User unfollowed successfully
+        '404':
+          description: User not found
+  /users/{userID}/bans/:
+    summary: Collection of banned users by the user identified by the unique ID
+    parameters:
+      - $ref: '#/components/parameters/userID'
+    post:
+      tags: ["Banning"]
+      summary: Create a new ban
+      description: |
+        Lets the user ban another user.
+      operationId: banUser
+      requestBody:
+        description: ID of the user to ban
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/userID'
+        required: true
+      responses:
+        '201':
+          description: User banned successfully
+        '400':
+          description: User not found
+  /users/{userID}/bans/{bannedID}:
+    summary: User bans another user
+    description: |
+      The user identified by userID bans another user identified by bannedID.
+    parameters:
+      - $ref: '#/components/parameters/userID'
+      - name: bannedID
+        in: path
+        description: Identifier of the banned user
+        required: true
+        schema:
+          $ref: '#/components/schemas/userID'
+        example: 0
+    delete:
+      tags: ["Banning"]
+      summary: Deletes a ban
+      description: |
+        Lets the user unban another user.
+      operationId: unbanUser
+      responses:
+        '200':
+          description: User unbanned successfully
+        '404':
+          description: User not found
+  /users/{userID}/photos/{photoID}/likes/:
+    summary: Collection of likes for a photo
+    description: | 
+      The user is identified by the unique ID and each photo is
+      identified by a unique ID per user.
+    parameters:
+      - $ref: '#/components/parameters/userID'
+      - $ref: '#/components/parameters/photoID'
+    post:
+      tags: ["Photos"]
+      summary: Creates a new like
+      description: |
+        Lets the user like a photo.
+      operationId: likePhoto
+      requestBody:
+        description: ID of the user liking the photo
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/userID'
+      responses:
+        '201':
+          description: Photo liked successfully
+        '400':
+          description: User liking the photo not found
+        '404':
+          description: Photo not found
+  /users/{userID}/photos/{photoID}/likes/{likeID}:
+    summary: User likes a photo identified by a unique ID per user
+    parameters:
+      - $ref: '#/components/parameters/userID'
+      - $ref: '#/components/parameters/photoID'
+      - name: likeID
+        in: path
+        description: Identifier of the user liking the photo
+        required: true
+        schema:
+          $ref: '#/components/schemas/userID'
+        example: 0
+    delete:
+      tags: ["Photos"]
+      summary: Deletes a like
+      description: |
+        Lets the user unlike a photo.
+      operationId: unlikePhoto
+      responses:
+        '200':
+          description: Photo unliked successfully
+        '404':
+          description: Photo not found or user not found
+  /users/{userID}/photos/{photoID}/comments/{commenterID}/:
+    summary: Collection of the comments made by a user on a photo
+    parameters:
+      - $ref: '#/components/parameters/userID'
+      - $ref: '#/components/parameters/photoID'
+      - name: commenterID
+        in: path
+        description: Identifier of the user commenting on the photo
+        required: true
+        schema:
+          $ref: '#/components/schemas/userID'
+        example: 0
+    post:
+      tags: ["Photos"]
+      summary: Creates a new comment
+      operationId: commentPhoto
+      requestBody:
+        description: Content of the comment
+        content:
+          application/json:
+            schema:
+              type: string
+              minLength: 1
+              maxLength: 128
+              example: "Hello!"
+        required: true
+      responses:
+        '201':
+          description: Comment posted successfully
+        '404':
+          description: Photo or user not found
+  /users/{userID}/photos/{photoID}/comments/{commenterID}/{commentID}:
+    summary: | 
+      Comment made by a user identified by commenterID on a photo identified 
+      by photoID (unique per user)
+    parameters:
+      - $ref: '#/components/parameters/userID'
+      - $ref: '#/components/parameters/photoID'
+      - name: commenterID
+        in: path
+        description: Identifier of the user commenting on the photo
+        required: true
+        schema:
+          $ref: '#/components/schemas/userID'
+      - name: commentID
+        in: path
+        description: Identifier of the comment
+        required: true
+        schema:
+          type: integer
+          format: int64
+        example: 0
+    delete:
+      tags: ["Photos"]
+      summary: Deletes a comment
+      operationId: uncommentPhoto
+      responses:
+        '200':
+          description: Comment deleted successfully
+        '404':
+          description: Comment not found
+components:
+  schemas:
+    username:
+      title: username
+      type: string
+      example: Maria
+      minLength: 3
+      maxLength: 16
+      pattern: 'ˆ.*?$'
+    userID:
+      title: userID
+      type: integer
+      format: int64
+      example: 0
+    photoID:
+      title: photoID
+      type: integer
+      format: int64
+      example: 0
+  parameters:
+    userID:
+      name: userID
+      in: path
+      description: User identifier
+      required: true
+      schema:
+        $ref: '#/components/schemas/userID'
+      example: 0
+    photoID:
+      name: photoID
+      in: path
+      description: Photo identifier unique per user
+      required: true
+      schema:
+        $ref: '#/components/schemas/photoID'
+      example: 0
