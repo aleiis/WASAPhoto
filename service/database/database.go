@@ -1,3 +1,34 @@
+/*
+Package database is the middleware between the app database and the code. All data (de)serialization (save/load) from a
+persistent database are handled here. Database specific logic should never escape this package.
+
+To use this package you need to apply migrations to the database if needed/wanted, connect to it (using the database
+data source name from config), and then initialize an instance of AppDatabase from the DB connection.
+
+For example, this code adds a parameter in `webapi` executable for the database data source name (add it to the
+main.WebAPIConfiguration structure):
+
+	DB struct {
+		Filename string `conf:""`
+	}
+
+This is an example on how to migrate the DB and connect to it:
+
+	// Start Database
+	logger.Println("initializing database support")
+	db, err := sql.Open("sqlite3", "./foo.db")
+	if err != nil {
+		logger.WithError(err).Error("error opening SQLite DB")
+		return fmt.Errorf("opening SQLite: %w", err)
+	}
+	defer func() {
+		logger.Debug("database stopping")
+		_ = db.Close()
+	}()
+
+Then you can initialize the AppDatabase and pass it to the api package.
+*/
+
 package database
 
 import (
@@ -8,39 +39,32 @@ import (
 )
 
 type AppDatabaseI interface {
-
-	// User functions
 	GetUserId(username string) (int64, error)
 	CreateUser(username string) (int64, error)
-	UserIdExists(userId int64) (bool, error)
+	UserExists(userId int64) (bool, error)
 	SetUsername(userID int64, newUsername string) error
 	GetUsername(userId int64) (string, error)
 	GetUserProfileStats(userId int64) (int64, int64, int64, error)
 	GetUserStream(userId int64) ([]Photo, error)
 
-	// Photo functions
 	PhotoExists(userId int64, photoId int64) (bool, error)
 	UploadPhoto(userId int64, img image.Image, format string) error
 	DeletePhoto(userId int64, photoId int64) error
 	GetUserPhotos(userId int64) ([]Photo, error)
 	GetPhotoStats(userId int64, photoId int64) (int64, int64, error)
 
-	// Follow functions
 	FollowExists(userId int64, followUserId int64) (bool, error)
 	CreateFollow(userId int64, followUserId int64) error
 	DeleteFollow(userId int64, followUserId int64) error
 
-	// Ban functions
 	BanExists(userId int64, bannedUserId int64) (bool, error)
 	CreateBan(userId int64, bannedUserId int64) error
 	DeleteBan(userId int64, bannedUserId int64) error
 
-	// Like functions
 	LikeExists(ownerId int64, photoId int64, userId int64) (bool, error)
 	CreateLike(ownerId int64, photoId int64, userId int64) error
 	DeleteLike(ownerId int64, photoId int64, userId int64) error
 
-	// Comment functions
 	CommentExists(ownerId int64, photoId int64, commentId int64) (bool, error)
 	CreateComment(ownerId int64, photoId int64, commentOwner int64, content string) error
 	DeleteComment(ownerId int64, photoId int64, commentId int64) error
@@ -53,6 +77,8 @@ type AppDatabase struct {
 	c *sql.DB
 }
 
+// New creates a new AppDatabase instance which is a wrapper around the provided database connection that implements the
+// AppDatabaseI interface.
 func New(db *sql.DB) (AppDatabaseI, error) {
 	if db == nil {
 		return nil, errors.New("database is required when building a AppDatabase")
@@ -87,7 +113,7 @@ func createSchema(db *sql.DB) error {
 			);
 		`)
 	if err != nil {
-		return fmt.Errorf("can't create the schema: %w", err)
+		return err
 	}
 
 	_, err = db.Exec(`
@@ -104,7 +130,7 @@ func createSchema(db *sql.DB) error {
 			);
 		`)
 	if err != nil {
-		return fmt.Errorf("can't create the schema: %w", err)
+		return err
 	}
 
 	_, err = db.Exec(`
@@ -123,7 +149,7 @@ func createSchema(db *sql.DB) error {
 			);
 		`)
 	if err != nil {
-		return fmt.Errorf("can't create the schema: %w", err)
+		return err
 	}
 
 	_, err = db.Exec(`
@@ -142,7 +168,7 @@ func createSchema(db *sql.DB) error {
 			);
 		`)
 	if err != nil {
-		return fmt.Errorf("can't create the schema: %w", err)
+		return err
 	}
 
 	_, err = db.Exec(`
@@ -162,7 +188,7 @@ func createSchema(db *sql.DB) error {
 			);
 		`)
 	if err != nil {
-		return fmt.Errorf("can't create the schema: %w", err)
+		return err
 	}
 
 	_, err = db.Exec(`
@@ -184,7 +210,7 @@ func createSchema(db *sql.DB) error {
 			);
 		`)
 	if err != nil {
-		return fmt.Errorf("can't create the schema: %w", err)
+		return err
 	}
 
 	return nil

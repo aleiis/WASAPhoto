@@ -1,3 +1,26 @@
+/*
+Webapi is the executable for the main web server.
+It builds a web server around APIs from `service/api`.
+Webapi connects to external resources needed (database) and starts two web servers: the API web server, and the debug.
+Everything is served via the API web server, except debug variables (/debug/vars) and profiler infos (pprof).
+
+Usage:
+
+	webapi [flags]
+
+Flags and configurations are handled automatically by the code in `load-configuration.go`.
+
+Return values (exit codes):
+
+	0
+		The program ended successfully (no errors, stopped by signal)
+
+	> 0
+		The program ended due to an error
+
+Note that this program will update the schema of the database to the latest version available (embedded in the
+executable during the build).
+*/
 package main
 
 import (
@@ -18,20 +41,31 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// main is the program entry point. The only purpose of this function is to call run() and set the exit code if there is
+// any error
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "error:", err)
+		_, _ = fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
 }
 
+// run executes the program. The body of this function should perform the following steps:
+// * reads the configuration
+// * creates and configure the logger
+// * connects to any external resources (like databases, authenticators, etc.)
+// * creates an instance of the service/api package
+// * starts the principal web server (using the service/api.Router.Handler() for HTTP handlers)
+// * waits for any termination event: SIGTERM signal (UNIX), non-recoverable server error, etc.
+// * closes the principal web server
 func run() error {
 
 	// Load the configuration
 	cfg, err := loadConfig()
-	if errors.Is(err, conf.ErrHelpWanted) {
-		return nil
-	} else if err != nil {
+	if err != nil {
+		if errors.Is(err, conf.ErrHelpWanted) {
+			return nil
+		}
 		return fmt.Errorf("loading config: %w", err)
 	}
 
@@ -56,7 +90,7 @@ func run() error {
 
 	defer func() {
 		logger.Debug("database stopping")
-		dbconn.Close()
+		_ = dbconn.Close()
 	}()
 
 	db, err := database.New(dbconn)
@@ -83,23 +117,21 @@ func run() error {
 		logger.WithError(err).Error("error creating the API server instance")
 		return fmt.Errorf("creating the API server instance: %w", err)
 	}
-	routerHandler := apirouter.Handler()
+	router := apirouter.Handler()
 
-	/*
-		router, err = registerWebUI(router)
-		if err != nil {
-			logger.WithError(err).Error("error registering web UI handler")
-			return fmt.Errorf("registering web UI handler: %w", err)
-		}
-	*/
+	router, err = registerWebUI(router)
+	if err != nil {
+		logger.WithError(err).Error("error registering web UI handler")
+		return fmt.Errorf("registering web UI handler: %w", err)
+	}
 
 	// Apply CORS policy
-	routerHandler = applyCORSHandler(routerHandler)
+	router = applyCORSHandler(router)
 
 	// Create the API server
 	apiserver := http.Server{
 		Addr:              cfg.Web.APIHost,
-		Handler:           routerHandler,
+		Handler:           router,
 		ReadTimeout:       cfg.Web.ReadTimeout,
 		ReadHeaderTimeout: cfg.Web.ReadTimeout,
 		WriteTimeout:      cfg.Web.WriteTimeout,
@@ -135,7 +167,7 @@ func run() error {
 		err = apiserver.Shutdown(ctx)
 		if err != nil {
 			logger.WithError(err).Warning("error during graceful shutdown of HTTP server")
-			apiserver.Close()
+			_ = apiserver.Close()
 		}
 	}
 

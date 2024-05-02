@@ -2,10 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"net/http"
-	"strconv"
-
 	"github.com/aleiis/WASAPhoto/service/database"
+	"net/http"
 
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/julienschmidt/httprouter"
@@ -33,11 +31,17 @@ type StreamPhoto struct {
 
 func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	id := ps.ByName("userId")
+	// Get the parameters
+	var userId int64
+	if params, err := checkIds(ps.ByName("userId")); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else {
+		userId = params[0]
+	}
 
-	bearer := r.Header.Get("Authorization")
-
-	if bearer != id {
+	// Authorization check
+	if !checkBearer(r.Header.Get("Authorization"), userId) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -49,23 +53,8 @@ func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	// Check if the new username contains at least 3 characters and no more than 16
-	if len(newUsername) < 3 || len(newUsername) > 16 {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	// Check if the username contains only alphanumeric characters
-	for _, c := range newUsername {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-	}
-
-	// Check if the user ID is a valid int64
-	userId, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
+	// Check if the username has the correct format
+	if !checkUsername(newUsername) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -87,20 +76,19 @@ func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, 
 
 func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	id := ps.ByName("userId")
-
-	// Check if the user ID is a valid int64
-	userId, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
+	// Get the parameters
+	var userId int64
+	if params, err := checkIds(ps.ByName("userId")); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
+	} else {
+		userId = params[0]
 	}
 
 	var userProfile UserProfile
 
 	// Get the username of the user
-	userProfile.Username, err = rt.db.GetUsername(userId)
-	if err != nil {
+	if username, err := rt.db.GetUsername(userId); err != nil {
 		if err == database.ErrUserNotFound {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
@@ -108,6 +96,8 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 		return
+	} else {
+		userProfile.Username = username
 	}
 
 	// Get the user photos
@@ -116,13 +106,13 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 		ctx.Logger.WithError(err).Error("can't get the user photos")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
-	} else {
-		userProfile.Photos = make([]PhotoIdentifier, len(userPhotos))
-		for i, photo := range userPhotos {
-			userProfile.Photos[i] = PhotoIdentifier{
-				OwnerId: photo.UserId,
-				PhotoId: photo.PhotoId,
-			}
+	}
+
+	userProfile.Photos = make([]PhotoIdentifier, len(userPhotos))
+	for i, photo := range userPhotos {
+		userProfile.Photos[i] = PhotoIdentifier{
+			OwnerId: photo.UserId,
+			PhotoId: photo.PhotoId,
 		}
 	}
 
@@ -147,24 +137,23 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 
 func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	strUserId := ps.ByName("userId")
+	// Get the parameters
+	var userId int64
+	if params, err := checkIds(ps.ByName("userId")); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else {
+		userId = params[0]
+	}
 
-	bearer := r.Header.Get("Authorization")
-
-	if bearer != strUserId {
+	// Authorization check
+	if !checkBearer(r.Header.Get("Authorization"), userId) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	// Check if the user ID is a valid int64
-	userId, err := strconv.ParseInt(strUserId, 10, 64)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	// Check if the user exists
-	exists, err := rt.db.UserIdExists(userId)
+	exists, err := rt.db.UserExists(userId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user exists")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -182,24 +171,24 @@ func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps
 		ctx.Logger.WithError(err).Error("can't get the user stream")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
-	} else {
-		stream = make([]StreamPhoto, len(photos))
-		for i, photo := range photos {
-			likes, comments, err := rt.db.GetPhotoStats(photo.UserId, photo.PhotoId)
-			if err != nil {
-				ctx.Logger.WithError(err).Error("can't get the photo stats")
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			stream[i] = StreamPhoto{
-				Identifier: PhotoIdentifier{
-					OwnerId: photo.UserId,
-					PhotoId: photo.PhotoId,
-				},
-				DateTime: photo.Date,
-				Likes:    likes,
-				Comments: comments,
-			}
+	}
+
+	stream = make([]StreamPhoto, len(photos))
+	for i, photo := range photos {
+		likes, comments, err := rt.db.GetPhotoStats(photo.UserId, photo.PhotoId)
+		if err != nil {
+			ctx.Logger.WithError(err).Error("can't get the photo stats")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		stream[i] = StreamPhoto{
+			Identifier: PhotoIdentifier{
+				OwnerId: photo.UserId,
+				PhotoId: photo.PhotoId,
+			},
+			DateTime: photo.Date,
+			Likes:    likes,
+			Comments: comments,
 		}
 	}
 

@@ -43,7 +43,7 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Check if the user ID of the user who liked the photo exists
-	if exists, err := rt.db.UserIdExists(likerId); err != nil {
+	if exists, err := rt.db.UserExists(likerId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user exists")
 		w.WriteHeader(http.StatusInternalServerError)
 		return

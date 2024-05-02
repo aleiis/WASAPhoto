@@ -48,7 +48,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Check if the user ID of the user who commented the photo exists
-	if exists, err := rt.db.UserIdExists(comment.Owner); err != nil {
+	if exists, err := rt.db.UserExists(comment.Owner); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user exists")
 		w.WriteHeader(http.StatusInternalServerError)
 		return

@@ -11,7 +11,7 @@ import (
 )
 
 var ErrPhotoNotFound = errors.New("photo not found")
-var ErrUnsuportedImageFormat = errors.New("unsupported image format")
+var ErrUnsupportedImageFormat = errors.New("unsupported image format")
 
 type Photo struct {
 	UserId  int64
@@ -33,11 +33,11 @@ func (db *AppDatabase) PhotoExists(userId int64, photoId int64) (bool, error) {
 func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string) error {
 
 	// Check if the user exists
-	exists, err := db.UserIdExists(userId)
+	exists, err := db.UserExists(userId)
 	if err != nil {
 		return fmt.Errorf("can't check if the user exists: %w", err)
 	} else if !exists {
-		return errors.New("user not found")
+		return ErrUserNotFound
 	}
 
 	// Get the number of photos of the user
@@ -48,15 +48,14 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 	}
 
 	// Check if all the folder structure exists
-	var strPhotoId string = fmt.Sprint(userId)
-	photoPath := filepath.Join("data", "images", strPhotoId)
+	photoPath := filepath.Join("data", "images", fmt.Sprint(userId))
 	if _, err := os.Stat(photoPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(photoPath, 0755); err != nil {
 			return fmt.Errorf("can't create the folder structure for user with id %d: %w", userId, err)
 		}
 	}
 
-	photoFilename := fmt.Sprintf("%s_%d.%s", strPhotoId, count, format)
+	photoFilename := fmt.Sprintf("%d_%d.%s", userId, count, format)
 	photoPath = filepath.Join(photoPath, photoFilename)
 
 	// Start a transaction
@@ -80,17 +79,33 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 
 	switch format {
 	case "jpg", "jpeg":
-		jpeg.Encode(f, img, nil)
+		err = jpeg.Encode(f, img, nil)
+		if err != nil {
+			_ = f.Close()
+			_ = os.Remove(photoPath)
+			return fmt.Errorf("can't encode the image: %w", err)
+
+		}
 	case "png":
-		png.Encode(f, img)
+		err = png.Encode(f, img)
+		if err != nil {
+			_ = f.Close()
+			_ = os.Remove(photoPath)
+			return fmt.Errorf("can't encode the image: %w", err)
+
+		}
 	default:
-		f.Close()
-		os.Remove(photoPath)
-		return ErrUnsuportedImageFormat
+		_ = f.Close()
+		_ = os.Remove(photoPath)
+		return ErrUnsupportedImageFormat
 	}
 
-	f.Close()
-	tx.Commit()
+	_ = f.Close()
+	err = tx.Commit()
+	if err != nil {
+		_ = os.Remove(photoPath)
+		return fmt.Errorf("can't commit transaction: %w", err)
+	}
 
 	return nil
 }
@@ -137,13 +152,14 @@ func (db *AppDatabase) DeletePhoto(userId int64, photoId int64) error {
 	return nil
 }
 
+// GetUserPhotos returns the photos of the user with the given user ID.
 func (db *AppDatabase) GetUserPhotos(userId int64) ([]Photo, error) {
 
 	// Check if the user exists
-	if exists, err := db.UserIdExists(userId); err != nil {
+	if exists, err := db.UserExists(userId); err != nil {
 		return nil, fmt.Errorf("can't check if the user exists: %w", err)
 	} else if !exists {
-		return nil, errors.New("user not found")
+		return nil, ErrUserNotFound
 	}
 
 	// Get the photos of the user

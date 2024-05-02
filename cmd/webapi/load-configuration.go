@@ -21,6 +21,7 @@ type WebAPIConfig struct {
 	Debug bool `conf:"default:false"`
 	Web   struct {
 		APIHost         string        `conf:"default:localhost:3000"`
+		DebugHost       string        `conf:"default:localhost:4000"`
 		ReadTimeout     time.Duration `conf:"default:5s"`
 		WriteTimeout    time.Duration `conf:"default:5s"`
 		ShutdownTimeout time.Duration `conf:"default:5s"`

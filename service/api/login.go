@@ -11,6 +11,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// doLoginHandler is an HTTP handler that returns the
 func (rt *_router) doLoginHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
 	// Decode the username from the body of the request
@@ -20,18 +21,10 @@ func (rt *_router) doLoginHandler(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
-	// Check if the username contains at least 3 characters and no more than 16
-	if len(username) < 3 || len(username) > 16 {
+	// Check if the username has the correct format
+	if !checkUsername(username) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
-	}
-
-	// Check if the username contains only alphanumeric characters
-	for _, c := range username {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
 	}
 
 	// Try to get the user ID from the database
@@ -53,7 +46,15 @@ func (rt *_router) doLoginHandler(w http.ResponseWriter, r *http.Request, ps htt
 		}
 	}
 
+	// Get the bearer token of the user
+	bearer, err := getBearer(id)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't get the bearer token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, `%d`, id)
+	_, _ = fmt.Fprintf(w, `%s`, bearer)
 }
