@@ -5,8 +5,14 @@ import (
 	"github.com/aleiis/WASAPhoto/service/database"
 	"github.com/julienschmidt/httprouter"
 	"image"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 )
+
+const ContentTypeJPEG = "image/jpeg"
+const ContentTypePNG = "image/png"
 
 func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
@@ -34,10 +40,10 @@ func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps
 
 	// Check if the format of the image is jpeg or png
 	contentTypeHeader := r.Header.Get("Content-Type")
-	if (contentTypeHeader != "image/jpeg" && contentTypeHeader != "image/png") ||
+	if (contentTypeHeader != ContentTypeJPEG && contentTypeHeader != ContentTypePNG) ||
 		(format != "jpeg" && format != "png") ||
-		(contentTypeHeader == "image/jpeg" && format != "jpeg") ||
-		(contentTypeHeader == "image/png" && format != "png") {
+		(contentTypeHeader == ContentTypeJPEG && format != "jpeg") ||
+		(contentTypeHeader == ContentTypePNG && format != "png") {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
@@ -88,4 +94,75 @@ func (rt *_router) deletePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	w.WriteHeader(200)
+}
+
+func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	// Get the parameters
+	var userId, photoId int64
+	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId")); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else {
+		userId, photoId = params[0], params[1]
+	}
+
+	// Check if the user requesting the profile is not banned by the user whose profile is being requested
+	// The check is made using the Authorization header
+	requesterId, err := getUserIdFromBearer(r.Header.Get("Authorization"))
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	banCheck, err := rt.db.BanExists(userId, requesterId)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't check if the user is banned")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else if banCheck {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	// Try to get the path of the photo
+	photo, err := rt.db.GetPhoto(userId, photoId)
+	if err != nil {
+		if err == database.ErrPhotoNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		} else {
+			ctx.Logger.WithError(err).Error("can't get the photo")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Open the file
+	fd, err := os.Open(photo.Path)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't open the photo file")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer fd.Close()
+
+	// Get the extension of the photo to set the Content-Type header
+	ext := filepath.Ext(photo.Path)
+	var contentType string
+	switch ext {
+	case ".jpg", ".jpeg":
+		contentType = ContentTypeJPEG
+	case ".png":
+		contentType = ContentTypePNG
+	}
+
+	// Configure the Content-Type header of the response
+	w.Header().Set("Content-Type", contentType)
+
+	// Copy the content of the file pointed by fd to the response writer
+	if _, err := io.Copy(w, fd); err != nil {
+		ctx.Logger.WithError(err).Error("can't copy the binary into the response writer")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }

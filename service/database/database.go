@@ -50,6 +50,7 @@ type AppDatabaseI interface {
 	PhotoExists(userId int64, photoId int64) (bool, error)
 	UploadPhoto(userId int64, img image.Image, format string) error
 	DeletePhoto(userId int64, photoId int64) error
+	GetPhoto(userId int64, photoId int64) (Photo, error)
 	GetUserPhotos(userId int64) ([]Photo, error)
 	GetPhotoStats(userId int64, photoId int64) (int64, int64, error)
 
@@ -65,10 +66,11 @@ type AppDatabaseI interface {
 	CreateLike(ownerId int64, photoId int64, userId int64) error
 	DeleteLike(ownerId int64, photoId int64, userId int64) error
 
-	CommentExists(ownerId int64, photoId int64, commentId int64) (bool, error)
-	CreateComment(ownerId int64, photoId int64, commentOwner int64, content string) error
-	DeleteComment(ownerId int64, photoId int64, commentId int64) error
-	GetCommentOwner(ownerId int64, photoId int64, commentId int64) (int64, error)
+	CommentExists(photoOwner int64, photoId int64, commentId int64) (bool, error)
+	CreateComment(photoOwner int64, photoId int64, commentOwner int64, content string) error
+	DeleteComment(photoOwner int64, photoId int64, commentId int64) error
+	GetCommentOwner(photoOwner int64, photoId int64, commentId int64) (int64, error)
+	GetComments(photoOwner int64, photoId int64) ([]Comment, error)
 
 	Ping() error
 }

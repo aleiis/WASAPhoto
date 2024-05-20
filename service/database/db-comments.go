@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+type Comment struct {
+	Owner   int64
+	Content string
+}
+
 func (db *AppDatabase) CommentExists(photoOwner int64, photoId int64, commentId int64) (bool, error) {
 	var count int
 	err := db.c.QueryRow(`SELECT COUNT(*) FROM comments WHERE photo_owner = ? AND photo_id = ? AND comment_id = ?;`, photoOwner, photoId, commentId).Scan(&count)
@@ -19,13 +24,14 @@ func (db *AppDatabase) CreateComment(photoOwner int64, photoId int64, commentOwn
 		return fmt.Errorf("the content must measure between 1 and 128 bytes")
 	}
 
-	// Get the number of comments of the photo
+	// Calculate the comment ID
 	var count int
 	err := db.c.QueryRow(`SELECT COUNT(*) FROM comments WHERE photo_owner = ? AND photo_id = ?;`, photoOwner, photoId).Scan(&count)
 	if err != nil {
 		return fmt.Errorf("can't get the number of comments: %w", err)
 	}
 
+	// Insert the comment
 	_, err = db.c.Exec(`INSERT INTO comments (photo_owner, photo_id, comment_id, comment_owner, content) VALUES (?, ?, ?, ?, ?);`, photoOwner, photoId, count, commentOwner, content)
 	if err != nil {
 		return fmt.Errorf("can't insert the comment: %w", err)
@@ -40,6 +46,11 @@ func (db *AppDatabase) DeleteComment(photoOwner int64, photoId int64, commentId 
 		return fmt.Errorf("can't delete the comment: %w", err)
 	}
 
+	_, err = db.c.Exec(`UPDATE comments SET comment_id = comment_id - 1 WHERE photo_owner = ? AND photo_id = ? AND comment_id > ?;`, photoOwner, photoId, commentId)
+	if err != nil {
+		return fmt.Errorf("can't update ids after comment delete (DB CORRUPTION!!!): %w", err)
+	}
+
 	return nil
 }
 
@@ -51,4 +62,26 @@ func (db *AppDatabase) GetCommentOwner(photoOwner int64, photoId int64, commentI
 	}
 
 	return commentOwner, nil
+}
+
+func (db *AppDatabase) GetComments(photoOwner int64, photoId int64) ([]Comment, error) {
+
+	// Get the comments of the photo
+	rows, err := db.c.Query(`SELECT comment_owner, content FROM comments WHERE photo_owner = ? AND photo_id = ?;`, photoOwner, photoId)
+	if err != nil {
+		return nil, fmt.Errorf("can't get the comments of the photo: %w", err)
+	}
+	defer rows.Close()
+
+	// Scan the photos from the query result
+	var comments []Comment
+	for rows.Next() {
+		var comment Comment
+		if err := rows.Scan(&comment.Owner, &comment.Content); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+
+	return comments, nil
 }

@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"image"
@@ -152,6 +153,22 @@ func (db *AppDatabase) DeletePhoto(userId int64, photoId int64) error {
 	return nil
 }
 
+func (db *AppDatabase) GetPhoto(userId int64, photoId int64) (Photo, error) {
+
+	var photo Photo
+	err := db.c.QueryRow(`SELECT * FROM photos WHERE user_id = ? AND photo_id = ?;`, userId, photoId).Scan(&photo.UserId, &photo.PhotoId, &photo.Path, &photo.Date)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Photo{}, ErrPhotoNotFound
+		} else {
+			return Photo{}, err
+		}
+	}
+
+	return photo, nil
+
+}
+
 // GetUserPhotos returns the photos of the user with the given user ID.
 func (db *AppDatabase) GetUserPhotos(userId int64) ([]Photo, error) {
 
@@ -163,7 +180,7 @@ func (db *AppDatabase) GetUserPhotos(userId int64) ([]Photo, error) {
 	}
 
 	// Get the photos of the user
-	rows, err := db.c.Query(`SELECT * FROM photos WHERE user_id = ?;`, userId)
+	rows, err := db.c.Query(`SELECT * FROM photos WHERE user_id = ? ORDER BY date DESC;`, userId)
 	if err != nil {
 		return nil, fmt.Errorf("can't get the photos of the user: %w", err)
 	}

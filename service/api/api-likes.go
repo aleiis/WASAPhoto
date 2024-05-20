@@ -97,7 +97,7 @@ func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 		ctx.Logger.WithError(err).Error("can't check if the like exists")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
-	} else if exists {
+	} else if !exists {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -111,4 +111,36 @@ func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	w.WriteHeader(200)
+}
+
+func (rt *_router) checkLikeStatusHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	// Get the parameters
+	var ownerId, photoId, likerId int64
+	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId"), ps.ByName("likerId")); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else {
+		ownerId, photoId, likerId = params[0], params[1], params[2]
+	}
+
+	// Authorization check
+	if !checkBearer(r.Header.Get("Authorization"), likerId) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Check if the user has liked the photo
+	exists, err := rt.db.LikeExists(ownerId, photoId, likerId)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't check like status")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if exists {
+		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(404)
+	}
 }

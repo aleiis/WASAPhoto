@@ -56,6 +56,39 @@ paths:
           description: Invalid userame
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /users/:
+    summary: Collection of users
+    get:
+      tags: ["User"]
+      summary: |
+        Retrieves the userId and username of the user that matches the given query.
+      operationId: getUser
+      parameters:
+      - name: username
+        in: query
+        description: Username of the user
+        required: true
+        schema:
+          $ref: '#/components/schemas/username'
+        example: "María"
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    $ref: '#/components/schemas/userId'
+                  username:
+                    $ref: '#/components/schemas/username'
+        '400':
+          description: Bad request within the query
+        '404':
+          description: User not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /users/{userId}:
     summary: User identified by a unique ID
     parameters:
@@ -149,6 +182,8 @@ paths:
                   properties:
                     identifier:
                       $ref: '#/components/schemas/imgIdentifier'
+                    user:
+                      $ref: '#/components/schemas/username'
                     dateTime:
                       type: string
                       format: date-time
@@ -157,7 +192,7 @@ paths:
                       type: integer
                       format: int64
                       minimum: 0
-                    comments:
+                    comments: 
                       type: integer
                       format: int64
                       minimum: 0
@@ -224,7 +259,34 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         '404':
           description: Photo or user not found
-        '500':
+        '500': 
+          $ref: '#/components/responses/InternalServerError'
+  /users/{userId}/photos/{photoId}/bin:
+    summary: Binary data of a user's photo identified by a unique ID
+    parameters:
+      - $ref: '#/components/parameters/userId'
+      - $ref: '#/components/parameters/photoId'
+    get:
+      tags: ["Photos"]
+      summary: Get the binary information (blob) of a photo
+      operationId: getPhoto
+      responses:
+        '200':
+          description: Image retrieved successfully
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request parameters
+        '404':
+          description: Photo not found
+        '500': 
           $ref: '#/components/responses/InternalServerError'
   /users/{userId}/follows/:
     summary: Collection of users followed by the user
@@ -285,7 +347,7 @@ paths:
         '404':
           description: Users not found
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/responses/InternalServerError' 
   /users/{userId}/bans/:
     summary: Collection of banned users by the user identified by the unique ID
     parameters:
@@ -348,7 +410,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
   /users/{userId}/photos/{photoId}/likes/:
     summary: Collection of likes for a photo
-    description: |
+    description: | 
       The user is identified by the unique ID and each photo is
       identified by a unique ID per user.
     parameters:
@@ -411,6 +473,25 @@ paths:
           description: Photo or user not found
         '500':
           $ref: '#/components/responses/InternalServerError'
+    get:
+      tags: ["Likes"]
+      summary: Lets a user check if it has liked a photo
+      description: |
+        If the user has liked the photo the API will return 200 OK as the status code. If not, it will return 404 Not Found.
+      operationId: checkLikeStatus
+      security: 
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Like exists
+        '400':
+          description: Bad request parameters
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Like not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /users/{userId}/photos/{photoId}/comments/:
     summary: Collection of the comments made on a photo
     parameters:
@@ -427,21 +508,13 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                owner:
-                  $ref: '#/components/schemas/userId'
-                content:
-                  type: string
-                  minLength: 1
-                  maxLength: 128
-                  example: "Hello!"
+              $ref: '#/components/schemas/comment'
         required: true
       responses:
         '201':
           description: Comment posted successfully
         '400':
-          description: |
+          description: | 
             Comment owner doesn't exist or comment lenght is greater than 128 bytes
         '401':
           $ref: '#/components/responses/UnauthorizedError'
@@ -449,15 +522,46 @@ paths:
           description: Photo or user not found
         '500':
           $ref: '#/components/responses/InternalServerError'
+    get:
+      tags: ["Comments"]
+      summary: Get all the comments of a photo
+      description: |
+        All comments of the photo are returned in an array, ordered in the same sequence as in the database. It does not return the ID of the owner of each comment; instead, it returns the username of each user.
+      operationId: getComments
+      responses:
+        '200':
+          description: Photo comments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user:
+                      $ref: '#/components/schemas/username'
+                    content:
+                      $ref: '#/components/schemas/commentContent'
+                description: |
+                  Array with all the comments of the photo. Each comment contains the username of its owner and the content of the comment.
+        '400':
+          description: Bad request parameters.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Photo not found.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /users/{userId}/photos/{photoId}/comments/{commentId}:
-    summary: |
+    summary: | 
       Comment made by a user on a photo identified by photoID (unique per user)
     parameters:
       - $ref: '#/components/parameters/userId'
       - $ref: '#/components/parameters/photoId'
       - name: commentId
         in: path
-        description: Identifier of the comment
+        description: |
+          Identifier of the comment. It's the index of the comment in the database, which is independent for each photo. The index starts at 0.
         required: true
         schema:
           type: integer
@@ -473,12 +577,11 @@ paths:
         '200':
           description: Comment deleted successfully
         '400':
-          description: |
-            Comment owner doesn't exist or comment lenght is greater than 128 bytes
+          description: Bad request parameters.
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Comment not found
+          description: Comment not found.
         '500':
           $ref: '#/components/responses/InternalServerError'
 components:
@@ -499,7 +602,7 @@ components:
       title: photoId
       type: integer
       format: int64
-      example:
+      example: 
     imgIdentifier:
       title: imgIdentifier
       type: object
@@ -508,9 +611,23 @@ components:
           $ref: '#/components/schemas/userId'
         photoId:
           $ref: '#/components/schemas/photoId'
-      example:
+      example: 
         ownerId: 13
         photoId: 4
+    commentContent:
+      title: commentContent
+      type: string
+      minLength: 1
+      maxLength: 128
+      example: "Hello!"
+    comment:
+      title: comment
+      type: object
+      properties:
+        owner:
+          $ref: '#/components/schemas/userId'
+        content:
+          $ref: '#/components/schemas/commentContent'
   parameters:
     userId:
       name: userId

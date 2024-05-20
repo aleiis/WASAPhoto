@@ -1,9 +1,13 @@
 package api
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
+
+// ErrInvalidBearer is returned when the Bearer token is invalid
+var ErrInvalidBearer = errors.New("invalid Bearer token")
 
 // getBearer returns the Bearer token of a given user
 func getBearer(userId int64) (string, error) {
@@ -26,6 +30,22 @@ func checkBearer(authHeader string, userId int64) bool {
 	}
 
 	return authHeader == userToken
+}
+
+// getUserIdFromBearer returns the user ID of the user identified by the Bearer token
+func getUserIdFromBearer(authHeader string) (int64, error) {
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return -1, ErrInvalidBearer
+	}
+
+	authHeader = authHeader[7:]
+
+	token, err := strconv.ParseInt(authHeader, 10, 64)
+	if err != nil {
+		return -1, ErrInvalidBearer
+	}
+
+	return token, nil
 }
 
 // checkIds checks if the given string IDs are valid and returns them

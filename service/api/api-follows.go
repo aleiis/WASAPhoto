@@ -130,3 +130,35 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 
 	w.WriteHeader(200)
 }
+
+func (rt *_router) checkFollowHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	// Get the parameters
+	var userId, followedId int64
+	if params, err := checkIds(ps.ByName("userId"), ps.ByName("followedId")); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else {
+		userId, followedId = params[0], params[1]
+	}
+
+	// Authorization check
+	if !checkBearer(r.Header.Get("Authorization"), userId) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// Check if the user is following the user to check
+	exists, err := rt.db.FollowExists(userId, followedId)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't check if follow exists")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if exists {
+		w.WriteHeader(200)
+	} else {
+		w.WriteHeader(404)
+	}
+}

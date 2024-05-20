@@ -17,6 +17,7 @@ func (rt *_router) doLoginHandler(w http.ResponseWriter, r *http.Request, ps htt
 	// Decode the username from the body of the request
 	var username string
 	if err := json.NewDecoder(r.Body).Decode(&username); err != nil {
+		ctx.Logger.WithError(err).Error("can't decode the username", username)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
