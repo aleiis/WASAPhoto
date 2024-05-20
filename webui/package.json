@@ -1,0 +1,23 @@
+{
+  "name": "wasaphoto",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+		"dev": "vite",
+		"build-dev": "vite build --mode development",
+		"build-prod": "vite build --mode production",
+		"build-embed": "vite build --mode production --base=/dashboard/",
+		"preview": "vite preview --port 4173"
+	},
+  "dependencies": {
+    "axios": "^1.6.8",
+    "bootstrap": "^5.3.3",
+    "nouislider": "^15.7.1",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.1.6"
+  }
+}
