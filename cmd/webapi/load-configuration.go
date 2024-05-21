@@ -13,7 +13,7 @@ import (
 
 type WebAPIConfig struct {
 	ConfigFile struct {
-		Path string `conf:"default:conf/config.yaml"`
+		Path string `conf:"default:conf/config.yml"`
 	}
 	DB struct {
 		Filename string `conf:"default:data/wasaphoto.db"`

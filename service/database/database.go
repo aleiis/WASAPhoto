@@ -76,12 +76,13 @@ type AppDatabaseI interface {
 }
 
 type AppDatabase struct {
-	c *sql.DB
+	c   *sql.DB
+	dsn string
 }
 
 // New creates a new AppDatabase instance which is a wrapper around the provided database connection that implements the
 // AppDatabaseI interface.
-func New(db *sql.DB) (AppDatabaseI, error) {
+func New(db *sql.DB, dsn string) (AppDatabaseI, error) {
 	if db == nil {
 		return nil, errors.New("database is required when building a AppDatabase")
 	}
@@ -101,7 +102,8 @@ func New(db *sql.DB) (AppDatabaseI, error) {
 	}
 
 	return &AppDatabase{
-		c: db,
+		c:   db,
+		dsn: dsn,
 	}, nil
 }
 
@@ -125,7 +127,7 @@ func createSchema(db *sql.DB) error {
 				path TEXT NOT NULL,
 				date DATETIME NOT NULL,
 				PRIMARY KEY (user_id, photo_id),
-				FOREIGN KEY (user_id) 
+				FOREIGN KEY (user_id)
 					REFERENCES users(user_id)
 						ON DELETE CASCADE
 						ON UPDATE CASCADE
@@ -140,11 +142,11 @@ func createSchema(db *sql.DB) error {
 				user_id INTEGER,
 				followed_user INTEGER,
 				PRIMARY KEY (user_id, followed_user),
-				FOREIGN KEY (user_id) 
+				FOREIGN KEY (user_id)
 					REFERENCES users(user_id)
 						ON DELETE CASCADE
 						ON UPDATE CASCADE,
-				FOREIGN KEY (followed_user) 
+				FOREIGN KEY (followed_user)
 					REFERENCES users(user_id)
 						ON DELETE CASCADE
 						ON UPDATE CASCADE
@@ -159,11 +161,11 @@ func createSchema(db *sql.DB) error {
 				user_id INTEGER,
 				banned_user INTEGER,
 				PRIMARY KEY (user_id, banned_user),
-				FOREIGN KEY (user_id) 
+				FOREIGN KEY (user_id)
 					REFERENCES users(user_id)
 						ON DELETE CASCADE
 						ON UPDATE CASCADE,
-				FOREIGN KEY (banned_user) 
+				FOREIGN KEY (banned_user)
 					REFERENCES users(user_id)
 						ON DELETE CASCADE
 						ON UPDATE CASCADE

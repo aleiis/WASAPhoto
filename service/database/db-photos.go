@@ -49,7 +49,7 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 	}
 
 	// Check if all the folder structure exists
-	photoPath := filepath.Join("data", "images", fmt.Sprint(userId))
+	photoPath := filepath.Join(filepath.Dir(db.dsn), "images", fmt.Sprint(userId))
 	if _, err := os.Stat(photoPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(photoPath, 0755); err != nil {
 			return fmt.Errorf("can't create the folder structure for user with id %d: %w", userId, err)

@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  backend:
+    image: docker.io/aleiis/wasaphoto-backend:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - C:\Users\alexa\Documents\IdeaProyects\WASAPhoto\data:/data
+  frontend:
+    image: docker.io/aleiis/wasaphoto-frontend:latest
+    ports:
+      - "8080:80"

@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/aleiis/WASAPhoto/service/api"
@@ -81,6 +82,12 @@ func run() error {
 	logger.Infof("starting the application")
 	logger.Infof("configuration loaded")
 
+	// Check if all the folder structure exists
+	if err := os.MkdirAll(filepath.Dir(cfg.DB.Filename), 0755); err != nil {
+		logger.WithError(err).Error("can't create the folder structure for the database")
+		return fmt.Errorf("can't create the folder structure for the database: %w", err)
+	}
+
 	// Create or open the database
 	dbconn, err := sql.Open("sqlite3", cfg.DB.Filename+"?_foreign_keys=1")
 	if err != nil {
@@ -93,7 +100,7 @@ func run() error {
 		_ = dbconn.Close()
 	}()
 
-	db, err := database.New(dbconn)
+	db, err := database.New(dbconn, cfg.DB.Filename)
 	if err != nil {
 		logger.WithError(err).Error("error creating AppDatabase")
 		return fmt.Errorf("creating AppDatabase: %w", err)
