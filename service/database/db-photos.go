@@ -59,6 +59,8 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 	photoFilename := fmt.Sprintf("%d_%d.%s", userId, count, format)
 	photoPath = filepath.Join(photoPath, photoFilename)
 
+	fixedPath := filepath.ToSlash(photoPath)
+
 	// Start a transaction
 	tx, err := db.c.Begin()
 	if err != nil {
@@ -67,7 +69,7 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 	defer tx.Rollback()
 
 	// Insert the photo data
-	_, err = tx.Exec(`INSERT INTO photos (user_id, photo_id, path, date) VALUES (?, ?, ?, datetime('now'));`, userId, count, photoPath)
+	_, err = tx.Exec(`INSERT INTO photos (user_id, photo_id, path, date) VALUES (?, ?, ?, datetime('now'));`, userId, count, fixedPath)
 	if err != nil {
 		return fmt.Errorf("can't insert photo data: %w", err)
 	}
@@ -126,6 +128,8 @@ func (db *AppDatabase) DeletePhoto(userId int64, photoId int64) error {
 	if err != nil {
 		return fmt.Errorf("can't get the photo path: %w", err)
 	}
+
+	photoPath = filepath.FromSlash(photoPath)
 
 	// Start a transaction
 	tx, err := db.c.Begin()

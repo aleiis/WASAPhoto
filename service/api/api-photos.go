@@ -1,14 +1,15 @@
 package api
 
 import (
-	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
-	"github.com/aleiis/WASAPhoto/service/database"
-	"github.com/julienschmidt/httprouter"
 	"image"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
+	"github.com/aleiis/WASAPhoto/service/database"
+	"github.com/julienschmidt/httprouter"
 )
 
 const ContentTypeJPEG = "image/jpeg"
@@ -137,8 +138,10 @@ func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps ht
 		}
 	}
 
+	photoPath := filepath.FromSlash(photo.Path)
+
 	// Open the file
-	fd, err := os.Open(photo.Path)
+	fd, err := os.Open(photoPath)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't open the photo file")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -147,7 +150,7 @@ func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps ht
 	defer fd.Close()
 
 	// Get the extension of the photo to set the Content-Type header
-	ext := filepath.Ext(photo.Path)
+	ext := filepath.Ext(photoPath)
 	var contentType string
 	switch ext {
 	case ".jpg", ".jpeg":
