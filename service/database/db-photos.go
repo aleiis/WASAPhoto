@@ -48,6 +48,8 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 		return fmt.Errorf("can't get the number of photos: %w", err)
 	}
 
+	photoFilename := fmt.Sprintf("%d_%d.%s", userId, count, format)
+
 	// Check if all the folder structure exists
 	photoPath := filepath.Join(filepath.Dir(db.dsn), "images", fmt.Sprint(userId))
 	if _, err := os.Stat(photoPath); os.IsNotExist(err) {
@@ -55,11 +57,7 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 			return fmt.Errorf("can't create the folder structure for user with id %d: %w", userId, err)
 		}
 	}
-
-	photoFilename := fmt.Sprintf("%d_%d.%s", userId, count, format)
 	photoPath = filepath.Join(photoPath, photoFilename)
-
-	fixedPath := filepath.ToSlash(photoPath)
 
 	// Start a transaction
 	tx, err := db.c.Begin()
@@ -69,7 +67,9 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 	defer tx.Rollback()
 
 	// Insert the photo data
-	_, err = tx.Exec(`INSERT INTO photos (user_id, photo_id, path, date) VALUES (?, ?, ?, datetime('now'));`, userId, count, fixedPath)
+	relativePath := filepath.Join(fmt.Sprint(userId), photoFilename)
+	relativePath = filepath.ToSlash(relativePath)
+	_, err = tx.Exec(`INSERT INTO photos (user_id, photo_id, path, date) VALUES (?, ?, ?, datetime('now'));`, userId, count, relativePath)
 	if err != nil {
 		return fmt.Errorf("can't insert photo data: %w", err)
 	}
@@ -130,6 +130,7 @@ func (db *AppDatabase) DeletePhoto(userId int64, photoId int64) error {
 	}
 
 	photoPath = filepath.FromSlash(photoPath)
+	photoPath = filepath.Join(filepath.Dir(db.dsn), "images", photoPath)
 
 	// Start a transaction
 	tx, err := db.c.Begin()
@@ -215,4 +216,25 @@ func (db *AppDatabase) GetPhotoStats(userId int64, photoId int64) (int64, int64,
 	}
 
 	return likes, comments, nil
+}
+
+func (db *AppDatabase) GetPhotoAbsolutePath(userId int64, photoId int64) (string, error) {
+
+	var photoPath string
+	err := db.c.QueryRow(`SELECT path FROM photos WHERE user_id = ? AND photo_id = ?;`, userId, photoId).Scan(&photoPath)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrPhotoNotFound
+		} else {
+			return "", err
+		}
+	}
+
+	photoPath = filepath.FromSlash(photoPath)
+	photoPath = filepath.Join(filepath.Dir(db.dsn), "images", photoPath)
+	if !filepath.IsAbs(photoPath) {
+		filepath.Abs(photoPath)
+	}
+
+	return photoPath, nil
 }

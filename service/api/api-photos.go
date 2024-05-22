@@ -126,7 +126,7 @@ func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	// Try to get the path of the photo
-	photo, err := rt.db.GetPhoto(userId, photoId)
+	photoPath, err := rt.db.GetPhotoAbsolutePath(userId, photoId)
 	if err != nil {
 		if err == database.ErrPhotoNotFound {
 			w.WriteHeader(http.StatusNotFound)
@@ -137,8 +137,6 @@ func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps ht
 			return
 		}
 	}
-
-	photoPath := filepath.FromSlash(photo.Path)
 
 	// Open the file
 	fd, err := os.Open(photoPath)

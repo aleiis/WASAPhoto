@@ -6,7 +6,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - C:\Users\alexa\Documents\IdeaProyects\WASAPhoto\data:/data
+      - ./data:/data
   frontend:
     image: docker.io/aleiis/wasaphoto-frontend:latest
     ports:
