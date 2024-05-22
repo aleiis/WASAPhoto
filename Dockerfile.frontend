@@ -5,14 +5,9 @@ FROM node:lts AS builder
 WORKDIR /app
 COPY webui webui
 
-# Update dependencies
-WORKDIR /app/webui
-RUN rm -f webui/package-lock.json
-RUN rm -rf webui/node_modules
-RUN npm i
-
 # Build Vue.js into plain HTML/CSS/JS
-RUN npm run build
+WORKDIR /app/webui
+RUN npm run build-prod
 
 # Create final container
 FROM nginx:stable
