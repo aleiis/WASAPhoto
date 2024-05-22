@@ -179,7 +179,8 @@ export default {
       <img :src="imgURL" id="img" @load="handleImageLoad">
       <p style="margin-bottom: 0px;">{{ user }}, {{ date }}</p>
       <div style="display: flex; align-items: center;">
-        <img :src="liked ? '/src/assets/red_heart_icon.png' : '/src/assets/heart_icon.png'" @click="toggleLike" style="cursor: pointer; width: 30px;">
+        <img v-if="liked" src='/src/assets/red_heart_icon.png' @click="toggleLike" style="cursor: pointer; width: 30px;">
+        <img v-else src='/src/assets/heart_icon.png' @click="toggleLike" style="cursor: pointer; width: 30px;">
         <p style="margin-left: 8px;">{{ totalLikes }} likes | {{ totalComments }} comments</p>
       </div>
       <button id="delete-foto" v-if="user === currentUser" @click="deletePhoto">Delete photo</button>
