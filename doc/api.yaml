@@ -16,7 +16,7 @@ info:
     email: ibanezpastrana.2116832@studenti.uniroma1.it
     url: https://github.com/aleiis
   version: 1.0.0
-servers: []
+servers: [ ]
 tags:
   - name: Liveness
     description: Resource used to identified the liveness of the service
@@ -37,8 +37,8 @@ tags:
 paths:
   /liveness:
     summary: Resource used to identified the liveness of the service
-    post:
-      tags: ["Liveness"]
+    get:
+      tags: [ "Liveness" ]
       summary: Check the liveness of the service
       description: |
         If the service is alive it returns HTTP Status 200, if not it returns HTTP Status Internal Server Error 500
@@ -46,11 +46,19 @@ paths:
       responses:
         '200':
           description: Service is alive
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/InfoMessage'
         '500':
           description: Service is not available
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
   /session:
     post:
-      tags: ["Login"]
+      tags: [ "Login" ]
       summary: Logs in the user
       description: |
         If the user does not exist, it will be created, and an identifier is returned. If the user exists, the user identifier is returned.
@@ -60,582 +68,608 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/username'
+              description: User details
+              type: object
+              properties:
+                username:
+                  $ref: '#/components/schemas/Username'
         required: true
       responses:
         '201':
-          description: User log-in action successful
+          description: User log-in action successful. Token returned.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/userId'
+                description: Token for the user. It is used to authenticate the user in the following requests.
+                type: string
+                example: "432"
         '400':
-          description: Invalid userame
+          $ref: '#/components/responses/BadRequestError'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /users/:
     summary: Collection of users
     get:
-      tags: ["User"]
+      tags: [ "User" ]
       summary: |
-        Retrieve the userId and username of the user that matches the given query.
+        Retrieve the user_id and username of the user that matches the given query.
+      description: |
+        Search for a user by username. If a the user exists it will return the user resource, this means its ID and its username.
+        If the user does not exist, it will return 404 Not Found.
       operationId: getUserByUsername
+      security:
+        - bearerAuth: [ ]
       parameters:
         - name: username
           in: query
           description: Username of the user
           required: true
           schema:
-            $ref: '#/components/schemas/username'
-          example: "María"
+            $ref: '#/components/schemas/Username'
+          example: "Maria"
       responses:
         '200':
           description: User retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/user'
+                $ref: '#/components/schemas/User'
         '400':
-          description: Missing or incorrect parameter in the query
+          $ref: '#/components/responses/BadRequestError'
         '404':
-          description: User not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}:
+  /users/{user_id}:
     summary: User identified by a unique ID
     parameters:
-      - $ref: '#/components/parameters/userId'
-    patch:
-      tags: ["User"]
+      - $ref: '#/components/parameters/user_id'
+    put:
+      tags: [ "User" ]
       summary: Modifies the username of a user
       description: |
         Users can change their username. The new username must be unique.
       operationId: setMyUserName
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       requestBody:
-        description: New username of the user
+        description: New representation of the user resource.
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                username:
-                  $ref: '#/components/schemas/username'
+              $ref: '#/components/schemas/User'
         required: true
       responses:
         '200':
           description: Username changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
         '400':
-          description: |
-            The new username may already exist or may be invalid
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: User not found
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Username already exists
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/profile:
+  /users/{user_id}/profile:
     summary: User's profile
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: '#/components/parameters/user_id'
     get:
-      tags: ["User"]
+      tags: [ "User" ]
       summary: Retrieves the user's profile
       description: |
         The user profile displays the user's photos, total uploads, followers, and following.
       operationId: getUserProfile
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: User profile retrieved successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  username:
-                    $ref: '#/components/schemas/username'
-                  photos:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/profilePhoto'
-                  uploads:
-                    type: integer
-                    format: int64
-                    minimum: 0
-                    example: 0
-                  followers:
-                    type: integer
-                    format: int64
-                    minimum: 0
-                    example: 0
-                  following:
-                    type: integer
-                    format: int64
-                    minimum: 0
-                    example: 0
+                $ref: '#/components/schemas/Profile'
         '400':
-          description: Missing or invalid parameters
+          $ref: '#/components/responses/BadRequestError'
         '401':
-          description: Missing or invalid bearer token
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: |
-            The requesting user may be banned by the owner of the requested profile
+          $ref: '#/components/responses/BannedByUserError'
         '404':
-          description: User not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/stream:
+  /users/{user_id}/stream:
     summary: User's stream
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: '#/components/parameters/user_id'
     get:
-      tags: ["User"]
+      tags: [ "User" ]
       summary: Retrieves the user's stream
+      description: |
+        The user's stream consists of images from users they follow. The stream is ordered in reverse chronological order.
       operationId: getMyStream
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: Stream retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    identifier:
-                      $ref: '#/components/schemas/imgIdentifier'
-                    user:
-                      $ref: '#/components/schemas/username'
-                    dateTime:
-                      type: string
-                      format: date-time
-                      description: ISO 8601
-                    likes:
-                      type: integer
-                      format: int64
-                      minimum: 0
-                    comments:
-                      type: integer
-                      format: int64
-                      minimum: 0
-                description: |
-                  Array of photos identified by its owner and the number of the photo in the owner's profile. Each photo includes the date and time in which it was published, the number of likes and the number of comments.
+                $ref: '#/components/schemas/Stream'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: User not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/photos/:
+  /users/{user_id}/photos/:
     summary: User's photos
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: '#/components/parameters/user_id'
     post:
-      tags: ["Photos"]
+      tags: [ "Photos" ]
       summary: Uploads a photo for the user
       description: |
         The user uploads a photo. The photo is stored in the user's profile.
       operationId: uploadPhoto
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       requestBody:
         description: Photo to upload
         content:
           image/png:
             schema:
+              description: PNG image
               type: string
               format: binary
+              minLength: 1
+              maxLength: 1048576
           image/jpeg:
             schema:
+              description: JPEG image
               type: string
               format: binary
+              minLength: 1
+              maxLength: 1048576
         required: true
       responses:
         '201':
           description: Photo uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalPhotoId'
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: User not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/photos/{photoId}:
+  /users/{user_id}/photos/{photo_id}:
     summary: User's photo identified by a unique ID
     parameters:
-      - $ref: '#/components/parameters/userId'
-      - $ref: '#/components/parameters/photoId'
+      - $ref: '#/components/parameters/user_id'
+      - $ref: '#/components/parameters/photo_id'
     delete:
-      tags: ["Photos"]
+      tags: [ "Photos" ]
       summary: Deletes a photo
+      description: |
+        The user deletes a photo. The photo is removed from the user's profile.
       operationId: deletePhoto
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
-        '200':
+        '204':
           description: Photo deleted successfully
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Photo or user not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/photos/{photoId}/bin:
+  /users/{user_id}/photos/{photo_id}/bin:
     summary: Binary data of a user's photo identified by a unique ID
     parameters:
-      - $ref: '#/components/parameters/userId'
-      - $ref: '#/components/parameters/photoId'
+      - $ref: '#/components/parameters/user_id'
+      - $ref: '#/components/parameters/photo_id'
     get:
-      tags: ["Photos"]
+      tags: [ "Photos" ]
       summary: Get the binary information (blob) of a photo
+      description: |
+        The user can retrieve the binary information of a photo. The photo is identified by the user's unique ID and the photo's unique ID.
+        The binary information may be in PNG or JPEG format.
       operationId: getPhoto
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: Image retrieved successfully
           content:
             image/png:
               schema:
+                description: PNG image
                 type: string
                 format: binary
+                minLength: 1
+                maxLength: 1048576
             image/jpeg:
               schema:
+                description: JPEG image
                 type: string
                 format: binary
+                minLength: 1
+                maxLength: 1048576
         '400':
-          description: Missing or invalid parameters
+          $ref: '#/components/responses/BadRequestError'
         '401':
-          description: Missing or invalid bearer token
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: |
-            The requesting user may be banned by the owner of the requested profile
+          $ref: '#/components/responses/BannedByUserError'
         '404':
-          description: Photo not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/follows/:
+  /users/{user_id}/follows/:
     summary: Collection of users followed by the user
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: '#/components/parameters/user_id'
     post:
-      tags: ["Following"]
+      tags: [ "Following" ]
       summary: Create a new follow
       description: |
         Lets the user follow another user. The follow operation will fail if the user to follow has banned the first user.
       operationId: followUser
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       requestBody:
         description: ID of the user to follow
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/userId'
+              $ref: '#/components/schemas/Follow'
         required: true
       responses:
         '201':
           description: User followed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Follow'
         '400':
-          description: User to follow doesn't exists
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: User to follow has banned the user
+          $ref: '#/components/responses/BannedByUserError'
         '404':
-          description: User not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/follows/{followedId}:
+  /users/{user_id}/follows/{followed_id}:
     summary: User follows another user
     parameters:
-      - $ref: '#/components/parameters/userId'
-      - name: followedId
+      - $ref: '#/components/parameters/user_id'
+      - name: followed_id
         in: path
         description: Identifier of the followed user
         required: true
         schema:
-          $ref: '#/components/schemas/userId'
+          $ref: '#/components/schemas/UserId'
         example: 0
     delete:
-      tags: ["Following"]
+      tags: [ "Following" ]
       summary: Deletes a follow
       description: |
         Lets the user unfollow another user.
       operationId: unfollowUser
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
-        '200':
+        '204':
           description: User unfollowed successfully
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Users not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
     get:
-      tags: ["Following"]
+      tags: [ "Following" ]
       summary: Lets a user check if it follows another user
       description: |
         If the user follows the other user the API will return 200 OK as the status code. If not, it will return 404 Not Found.
       operationId: checkFollow
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: Follow exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Follow'
         '400':
-          description: Bad request parameters
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Follow not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/bans/:
+  /users/{user_id}/bans/:
     summary: Collection of banned users by the user identified by the unique ID
     parameters:
-      - $ref: '#/components/parameters/userId'
+      - $ref: '#/components/parameters/user_id'
     post:
-      tags: ["Banning"]
+      tags: [ "Banning" ]
       summary: Create a new ban
       description: |
         Lets the user ban another user. If the banned user is following the first user then the follow will be cancelled.
       operationId: banUser
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       requestBody:
         description: ID of the user to ban
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/userId'
+              $ref: '#/components/schemas/Ban'
         required: true
       responses:
         '201':
           description: User banned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ban'
         '400':
-          description: User to ban doesn't exists
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: User not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/bans/{bannedId}:
+  /users/{user_id}/bans/{banned_id}:
     summary: User bans another user
     description: |
-      The user identified by userID bans another user identified by bannedID.
+      The user identified by user_id bans another user identified by bannedID.
     parameters:
-      - $ref: '#/components/parameters/userId'
-      - name: bannedId
+      - $ref: '#/components/parameters/user_id'
+      - name: banned_id
         in: path
         description: Identifier of the banned user
         required: true
         schema:
-          $ref: '#/components/schemas/userId'
+          $ref: '#/components/schemas/UserId'
         example: 0
     delete:
-      tags: ["Banning"]
+      tags: [ "Banning" ]
       summary: Deletes a ban
       description: |
         Lets the user unban another user.
       operationId: unbanUser
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
-        '200':
+        '204':
           description: User unbanned successfully
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Users not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
     get:
-      tags: ["Banning"]
+      tags: [ "Banning" ]
       summary: Lets a user check if it has banned another user
       description: |
         If the user has banned the other user the API will return 200 OK as the status code. If not, it will return 404 Not Found.
       operationId: checkBan
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: Ban exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ban'
         '400':
-          description: Bad request parameters
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Ban not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/photos/{photoId}/likes/:
+  /users/{user_id}/photos/{photo_id}/likes/:
     summary: Collection of likes for a photo
     description: |
       The user is identified by the unique ID and each photo is
       identified by a unique ID per user.
     parameters:
-      - $ref: '#/components/parameters/userId'
-      - $ref: '#/components/parameters/photoId'
+      - $ref: '#/components/parameters/user_id'
+      - $ref: '#/components/parameters/photo_id'
     post:
-      tags: ["Likes"]
+      tags: [ "Likes" ]
       summary: Creates a new like
       description: |
         Lets the user like a photo.
       operationId: likePhoto
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       requestBody:
         description: ID of the user liking the photo
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/userId'
+              description: ID of the user liking the photo
+              type: object
+              properties:
+                liker:
+                  $ref: '#/components/schemas/UserId'
       responses:
         '201':
           description: Photo liked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Like'
         '400':
-          description: |
-            The user ID of the user liking the photo may invalid or not found. Also, the like may already exist.
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Photo not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/photos/{photoId}/likes/{likerId}:
+  /users/{user_id}/photos/{photo_id}/likes/{liker_id}:
     summary: User likes a photo identified by a unique ID per user
     parameters:
-      - $ref: '#/components/parameters/userId'
-      - $ref: '#/components/parameters/photoId'
-      - name: likerId
+      - $ref: '#/components/parameters/user_id'
+      - $ref: '#/components/parameters/photo_id'
+      - name: liker_id
         in: path
         description: Identifier of the user liking the photo
         required: true
         schema:
-          $ref: '#/components/schemas/userId'
+          $ref: '#/components/schemas/UserId'
         example: 0
     delete:
-      tags: ["Likes"]
+      tags: [ "Likes" ]
       summary: Deletes a like
       description: |
         Lets the user unlike a photo.
       operationId: unlikePhoto
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
-        '200':
+        '204':
           description: Photo unliked successfully
         '400':
-          description: Bad Request
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Photo or user not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
     get:
-      tags: ["Likes"]
+      tags: [ "Likes" ]
       summary: Lets a user check if it has liked a photo
       description: |
         If the user has liked the photo the API will return 200 OK as the status code. If not, it will return 404 Not Found.
       operationId: checkLikeStatus
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: Like exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Like'
         '400':
-          description: Bad request parameters
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Like not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/photos/{photoId}/comments/:
+  /users/{user_id}/photos/{photo_id}/comments/:
     summary: Collection of the comments made on a photo
     parameters:
-      - $ref: '#/components/parameters/userId'
-      - $ref: '#/components/parameters/photoId'
+      - $ref: '#/components/parameters/user_id'
+      - $ref: '#/components/parameters/photo_id'
     post:
-      tags: ["Comments"]
+      tags: [ "Comments" ]
       summary: Creates a new comment
+      description: |
+        Lets the user comment on a photo.
       operationId: commentPhoto
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       requestBody:
         description: Owner and content of the comment
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/comment'
+              $ref: '#/components/schemas/Comment'
         required: true
       responses:
         '201':
           description: Comment posted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
         '400':
-          description: |
-            Comment owner doesn't exist or comment lenght is greater than 128 bytes
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Photo or user not found
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
     get:
-      tags: ["Comments"]
+      tags: [ "Comments" ]
       summary: Get all the comments of a photo
       description: |
         All comments of the photo are returned in an array, ordered in the same sequence as in the database. It does not return the ID of the owner of each comment; instead, it returns the username of each user.
       operationId: getComments
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: Photo comments retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    user:
-                      $ref: '#/components/schemas/username'
-                    content:
-                      $ref: '#/components/schemas/commentContent'
-                description: |
-                  Array with all the comments of the photo. Each comment contains the username of its owner and the content of the comment.
+                description: Comments of the photo
+                type: object
+                properties:
+                  comments:
+                    description: Array of comments in the photo
+                    type: array
+                    minItems: 0
+                    maxItems: 100000
+                    items:
+                      $ref: '#/components/schemas/Comment'
         '400':
-          description: Bad request parameters.
+          $ref: '#/components/responses/BadRequestError'
         '401':
-          description: Invalid bearer token
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: |
-            The requesting user may be banned by the owner of the requested profile
+          $ref: '#/components/responses/BannedByUserError'
         '404':
-          description: Photo not found.
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /users/{userId}/photos/{photoId}/comments/{commentId}:
+  /users/{user_id}/photos/{photo_id}/comments/{comment_id}:
     summary: |
-      Comment made by a user on a photo identified by photoID (unique per user)
+      Comment made by a user on a photo identified by photo_id (unique per user)
     parameters:
-      - $ref: '#/components/parameters/userId'
-      - $ref: '#/components/parameters/photoId'
-      - name: commentId
+      - $ref: '#/components/parameters/user_id'
+      - $ref: '#/components/parameters/photo_id'
+      - name: comment_id
         in: path
         description: |
           Identifier of the comment. It's the index of the comment in the database, which is independent for each photo. The index starts at 0.
@@ -645,116 +679,249 @@ paths:
           format: int64
         example: 0
     delete:
-      tags: ["Comments"]
+      tags: [ "Comments" ]
       summary: Deletes a comment
+      description: |
+        Lets the user delete a comment.
       operationId: uncommentPhoto
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
-        '200':
+        '204':
           description: Comment deleted successfully
         '400':
-          description: Bad request parameters.
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Comment not found.
+          $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 components:
   schemas:
-    username:
-      title: username
+    InfoMessage:
+      title: InfoMessage
+      description: Information message
       type: string
-      example: Maria
+      example: "This is an info message."
+    ErrorMessage:
+      title: ErrorMessage
+      description: Error message
+      type: string
+      example: "Internal Server Error"
+    Date:
+      title: Date
+      description: Date in ISO 8601 format
+      type: string
+      format: date-time
+    UserId:
+      title: UserId
+      description: Unique identifier of a user
+      type: integer
+      format: int64
+      example: 0
+    Username:
+      title: Username
+      description: Username of a user. Must be unique.
+      type: string
+      example: "Maria"
       minLength: 3
       maxLength: 16
-      pattern: "^[a-zA-Z0-9]*$"
-    userId:
-      title: userId
-      type: integer
-      format: int64
-      example: 0
-    user:
-      title: user
+      pattern: ^[a-zA-Z0-9]*$
+    User:
+      title: User
+      description: User resource
       type: object
       properties:
-        userId:
-          $ref: '#/components/schemas/userId'
+        id:
+          $ref: '#/components/schemas/UserId'
         username:
-          $ref: '#/components/schemas/username'
-    photoId:
-      title: photoId
+          $ref: '#/components/schemas/Username'
+    UserPhotoId:
+      title: UserPhotoId
+      description: Identifier of a photo unique per user. Each user has its independent set of photo identifiers.
       type: integer
       format: int64
       example: 0
-    imgIdentifier:
-      title: imgIdentifier
-      type: object
-      properties:
-        ownerId:
-          $ref: '#/components/schemas/userId'
-        photoId:
-          $ref: '#/components/schemas/photoId'
-      example:
-        ownerId: 13
-        photoId: 4
-    commentContent:
-      title: commentContent
-      type: string
-      minLength: 1
-      maxLength: 128
-      example: "Hello!"
-    comment:
-      title: comment
+    GlobalPhotoId:
+      title: GlobalPhotoId
+      description: Global identifier of a photo. A photo is identified by the user's unique ID and the photo's unique ID per user.
       type: object
       properties:
         owner:
-          $ref: '#/components/schemas/userId'
-        content:
-          $ref: '#/components/schemas/commentContent'
-    profilePhoto:
-      title: profilePhoto
+          $ref: '#/components/schemas/UserId'
+        id:
+          $ref: '#/components/schemas/UserPhotoId'
+      example:
+        owner: 13
+        id: 4
+    Photo:
+      title: Photo
+      description: General information of a photo
       type: object
       properties:
-        photoId:
-          $ref: '#/components/schemas/photoId'
-        dateTime:
-          type: string
-          format: date-time
-          description: ISO 8601
+        owner:
+          $ref: '#/components/schemas/User'
+        id:
+          $ref: '#/components/schemas/UserPhotoId'
+        date:
+          $ref: '#/components/schemas/Date'
         likes:
+          description: Number of likes of the photo
           type: integer
           format: int64
           minimum: 0
         comments:
+          description: Number of comments of the photo
           type: integer
           format: int64
           minimum: 0
+    Follow:
+      title: Follow
+      description: Follow resource
+      type: object
+      properties:
+        follower:
+          $ref: '#/components/schemas/UserId'
+        followed:
+          $ref: '#/components/schemas/UserId'
+    Ban:
+      title: Ban
+      description: Ban resource
+      type: object
+      properties:
+        ban_issuer:
+          $ref: '#/components/schemas/UserId'
+        banned_user:
+          $ref: '#/components/schemas/UserId'
+    Like:
+      title: Like
+      description: Like resource
+      type: object
+      properties:
+        liker:
+          $ref: '#/components/schemas/UserId'
+        photo:
+          $ref: '#/components/schemas/GlobalPhotoId'
+    PhotoCommentId:
+      title: PhotoCommentId
+      description: Identifier of a comment unique per photo. Each photo has its independent set of comment identifiers.
+      type: integer
+      format: int64
+      example: 0
+    Comment:
+      title: Comment
+      description: Comment resource
+      type: object
+      properties:
+        photo:
+          $ref: '#/components/schemas/GlobalPhotoId'
+        id:
+          $ref: '#/components/schemas/PhotoCommentId'
+        owner:
+          $ref: '#/components/schemas/UserId'
+        content:
+          description: Content of the comment
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: .*
+          example: "Hey!"
+    Profile:
+        title: Profile
+        description: Profile of a user
+        type: object
+        properties:
+          owner:
+            $ref: '#/components/schemas/User'
+          photos:
+            description: Array of photos in the user's profile
+            type: array
+            minItems: 0
+            maxItems: 100000
+            items:
+              $ref: '#/components/schemas/Photo'
+          uploads:
+            description: Number of photos uploaded by the user
+            type: integer
+            format: int64
+            minimum: 0
+            example: 0
+          followers:
+            description: Number of followers of the user
+            type: integer
+            format: int64
+            minimum: 0
+            example: 0
+          following:
+            description: Number of users followed by the user
+            type: integer
+            format: int64
+            minimum: 0
+            example: 0
+    Stream:
+      title: Stream
+      description: User stream in reverse chronological order
+      type: object
+      properties:
+        stream:
+          description: Array of photos in the user's stream
+          type: array
+          minItems: 0
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Photo'
 
   parameters:
-    userId:
-      name: userId
+    user_id:
+      name: user_id
       in: path
       description: User identifier
       required: true
       schema:
-        $ref: '#/components/schemas/userId'
+        $ref: '#/components/schemas/UserId'
       example: 0
-    photoId:
-      name: photoId
+    photo_id:
+      name: photo_id
       in: path
       description: Photo identifier unique per user
       required: true
       schema:
-        $ref: '#/components/schemas/photoId'
+        $ref: '#/components/schemas/UserPhotoId'
       example: 0
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
   responses:
+    BadRequestError:
+      description: Bad Request
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
     UnauthorizedError:
       description: Access token is missing or invalid
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    BannedByUserError:
+      description: |
+        The requesting user may be banned and cannot access the requested resource.
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    NotFoundError:
+      description: Resource not found
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
     InternalServerError:
       description: Internal Server Error
+      content:
+        text/plain:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
