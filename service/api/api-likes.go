@@ -8,139 +8,163 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+type Like struct {
+	Liker int64         `json:"liker"`
+	Photo GlobalPhotoId `json:"photo"`
+}
+
 func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
 	// Get the parameters
-	var ownerId, photoId int64
+	var photoOwner, photoId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId")); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Missing or invalid parameters.", http.StatusBadRequest)
 		return
 	} else {
-		ownerId, photoId = params[0], params[1]
+		photoOwner, photoId = params[0], params[1]
 	}
 
 	// Decode the user ID of the user who liked the photo from the body of the request
-	var likerId int64
-	if err := json.NewDecoder(r.Body).Decode(&likerId); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	var like Like
+	if err := json.NewDecoder(r.Body).Decode(&like); err != nil {
+		http.Error(w, "Error decoding the request body.", http.StatusBadRequest)
 		return
 	}
 
 	// Authorization check
-	if !checkBearer(r.Header.Get("Authorization"), likerId) {
-		w.WriteHeader(http.StatusUnauthorized)
+	if !checkBearer(r.Header.Get("Authorization"), like.Liker) {
+		http.Error(w, "Unathorized.", http.StatusUnauthorized)
 		return
 	}
 
 	// Check if the photo exists
-	if exists, err := rt.db.PhotoExists(ownerId, photoId); err != nil {
+	if exists, err := rt.db.PhotoExists(photoOwner, photoId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the photo exists")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the photo exists.", http.StatusInternalServerError)
 		return
 	} else if !exists {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "Photo not found.", http.StatusNotFound)
 		return
 	}
 
 	// Check if the user ID of the user who liked the photo exists
-	if exists, err := rt.db.UserExists(likerId); err != nil {
+	if exists, err := rt.db.UserExists(like.Liker); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user exists")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
 		return
 	} else if !exists {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "User liking the photo does not exist.", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the path parameters match the body parameters
+	if photoOwner != like.Photo.Owner || photoId != like.Photo.Id {
+		http.Error(w, "Photo ID mismatch. The photo ID in the URL must be the same as the one in the request body.", http.StatusBadRequest)
 		return
 	}
 
 	// Check if the user has already liked the photo
-	exists, err := rt.db.LikeExists(ownerId, photoId, likerId)
+	exists, err := rt.db.LikeExists(like.Photo.Owner, like.Photo.Id, like.Liker)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the like exists")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the like exists.", http.StatusInternalServerError)
 		return
 	} else if exists {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Already liked the photo.", http.StatusBadRequest)
 		return
 	}
 
 	// Try to like the photo
-	err = rt.db.CreateLike(ownerId, photoId, likerId)
+	err = rt.db.CreateLike(like.Photo.Owner, like.Photo.Id, like.Liker)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't like the photo")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error liking the photo.", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(201)
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(like)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't encode the response")
+		http.Error(w, "Error encoding the response body.", http.StatusInternalServerError)
+	}
 }
 
 func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
 	// Get the parameters
-	var ownerId, photoId, likerId int64
+	var photoOwner, photoId, likerId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId"), ps.ByName("likerId")); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Missing or invalid parameters.", http.StatusBadRequest)
 		return
 	} else {
-		ownerId, photoId, likerId = params[0], params[1], params[2]
+		photoOwner, photoId, likerId = params[0], params[1], params[2]
 	}
 
 	// Authorization check
 	if !checkBearer(r.Header.Get("Authorization"), likerId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 		return
 	}
 
-	// Check if the user has already liked the photo
-	exists, err := rt.db.LikeExists(ownerId, photoId, likerId)
+	// Check if the like exists
+	exists, err := rt.db.LikeExists(photoOwner, photoId, likerId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the like exists")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the like exists.", http.StatusInternalServerError)
 		return
 	} else if !exists {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Like not found.", http.StatusNotFound)
 		return
 	}
 
 	// Try to unlike the photo
-	err = rt.db.DeleteLike(ownerId, photoId, likerId)
+	err = rt.db.DeleteLike(photoOwner, photoId, likerId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't unlike the photo")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error unliking the photo.", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(200)
+	w.WriteHeader(204)
 }
 
 func (rt *_router) checkLikeStatusHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
 	// Get the parameters
-	var ownerId, photoId, likerId int64
+	var photoOwner, photoId, likerId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId"), ps.ByName("likerId")); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Missing or invalid parameters.", http.StatusBadRequest)
 		return
 	} else {
-		ownerId, photoId, likerId = params[0], params[1], params[2]
+		photoOwner, photoId, likerId = params[0], params[1], params[2]
 	}
 
 	// Authorization check
 	if !checkBearer(r.Header.Get("Authorization"), likerId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 		return
 	}
 
 	// Check if the user has liked the photo
-	exists, err := rt.db.LikeExists(ownerId, photoId, likerId)
+	exists, err := rt.db.LikeExists(photoOwner, photoId, likerId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check like status")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the like exists.", http.StatusInternalServerError)
 		return
 	}
 
-	if exists {
-		w.WriteHeader(200)
-	} else {
-		w.WriteHeader(404)
+	if !exists {
+		http.Error(w, "Like does not exists.", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(Like{Liker: likerId, Photo: GlobalPhotoId{Owner: photoOwner, Id: photoId}})
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't encode the response")
+		http.Error(w, "Error encoding the response body.", http.StatusInternalServerError)
 	}
 }

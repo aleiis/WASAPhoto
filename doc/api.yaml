@@ -528,11 +528,7 @@ paths:
         content:
           application/json:
             schema:
-              description: ID of the user liking the photo
-              type: object
-              properties:
-                liker:
-                  $ref: '#/components/schemas/UserId'
+              $ref: '#/components/schemas/Like'
       responses:
         '201':
           description: Photo liked successfully
@@ -544,6 +540,8 @@ paths:
           $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/BannedByUserError'
         '404':
           $ref: '#/components/responses/NotFoundError'
         '500':
