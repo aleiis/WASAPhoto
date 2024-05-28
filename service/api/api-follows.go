@@ -67,7 +67,7 @@ func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps 
 		http.Error(w, "Error checking if the follow exists.", http.StatusInternalServerError)
 		return
 	} else if exists {
-		http.Error(w, "Already following the user.", http.StatusConflict)
+		http.Error(w, "Already following the user.", http.StatusBadRequest)
 		return
 	}
 

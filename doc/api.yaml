@@ -398,7 +398,7 @@ paths:
       summary: Lets a user check if it follows another user
       description: |
         If the user follows the other user, the API will return 200 OK as the status code and the representation of the follow
-        resource will be returned. If not, it will return 404 Not Found.
+        resource. If not, it will return 404 Not Found.
       operationId: checkFollow
       security:
         - bearerAuth: [ ]
@@ -430,7 +430,7 @@ paths:
       security:
         - bearerAuth: [ ]
       requestBody:
-        description: ID of the user to ban
+        description: Representation of the ban resource
         content:
           application/json:
             schema:
@@ -475,6 +475,8 @@ paths:
       responses:
         '204':
           description: User unbanned successfully
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
@@ -485,7 +487,8 @@ paths:
       tags: [ "Banning" ]
       summary: Lets a user check if it has banned another user
       description: |
-        If the user has banned the other user the API will return 200 OK as the status code. If not, it will return 404 Not Found.
+        If the user has banned the other user, the API will return 200 OK as the status code and the representation of the ban resource.
+        If not, it will return 404 Not Found.
       operationId: checkBan
       security:
         - bearerAuth: [ ]
