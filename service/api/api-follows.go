@@ -7,77 +7,95 @@ import (
 	"net/http"
 )
 
+type Follow struct {
+	Follower int64 `json:"follower"`
+	Followed int64 `json:"followed"`
+}
+
 func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
 	// Get the parameters
 	var userId int64
-	if params, err := checkIds(ps.ByName("userId")); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	params, err := checkIds(ps.ByName("userId"))
+	if err != nil {
+		http.Error(w, "Missing or invalid parameters.", http.StatusBadRequest)
 		return
-	} else {
-		userId = params[0]
 	}
+	userId = params[0]
 
 	// Authorization check
 	if !checkBearer(r.Header.Get("Authorization"), userId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 		return
 	}
 
-	// Decode the user ID to follow from the body of the request
-	var followedId int64
-	if err := json.NewDecoder(r.Body).Decode(&followedId); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	// Decode the request body
+	var follow Follow
+	if err := json.NewDecoder(r.Body).Decode(&follow); err != nil {
+		http.Error(w, "Invalid request body.", http.StatusBadRequest)
 		return
 	}
 
 	// Check if both user IDs exist
-	for _, id := range []int64{userId, followedId} {
+	for _, id := range []int64{userId, follow.Followed} {
 		exists, err := rt.db.UserExists(id)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't check if the user exists")
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
 			return
 		} else if !exists {
-			w.WriteHeader(http.StatusNotFound)
+			http.Error(w, "User not found.", http.StatusNotFound)
 			return
 		}
 	}
 
+	// Check if the user ID from the URL is the same as the one in the request body
+	if userId != follow.Follower {
+		http.Error(w, "User ID mismatch. The user ID in the URL must be the same as the one in the request body.", http.StatusBadRequest)
+		return
+	}
+
 	// Check if the user is trying to follow itself
-	if userId == followedId {
-		w.WriteHeader(http.StatusBadRequest)
+	if follow.Follower == follow.Followed {
+		http.Error(w, "Can't follow yourself.", http.StatusBadRequest)
 		return
 	}
 
 	// Check if the follow already exists
-	if exists, err := rt.db.FollowExists(userId, followedId); err != nil {
+	if exists, err := rt.db.FollowExists(follow.Follower, follow.Followed); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if follow exists")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the follow exists.", http.StatusInternalServerError)
 		return
 	} else if exists {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Already following the user.", http.StatusConflict)
 		return
 	}
 
 	// Check if the user to follow has banned the user
-	if exists, err := rt.db.BanExists(followedId, userId); err != nil {
+	if exists, err := rt.db.BanExists(follow.Followed, follow.Follower); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user has banned the user")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the followed user has banned the follower user.", http.StatusInternalServerError)
 		return
 	} else if exists {
-		w.WriteHeader(http.StatusForbidden)
+		http.Error(w, "Can't follow the user.", http.StatusForbidden)
 		return
 	}
 
 	// Try to follow the user
-	if err := rt.db.CreateFollow(userId, followedId); err != nil {
+	if err := rt.db.CreateFollow(follow.Follower, follow.Followed); err != nil {
 		ctx.Logger.WithError(err).Error("can't follow the user")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error following the user.", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(201)
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(follow)
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't encode the follow")
+		http.Error(w, "Error encoding the response body.", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
@@ -85,7 +103,7 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 	// Get the parameters
 	var userId, followedId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("followedId")); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Missing or invalid parameters.", http.StatusBadRequest)
 		return
 	} else {
 		userId = params[0]
@@ -94,7 +112,7 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 
 	// Authorization check
 	if !checkBearer(r.Header.Get("Authorization"), userId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 		return
 	}
 
@@ -103,10 +121,10 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 		exists, err := rt.db.UserExists(id)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't check if the user exists")
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
 			return
 		} else if !exists {
-			w.WriteHeader(http.StatusNotFound)
+			http.Error(w, "User not found.", http.StatusNotFound)
 			return
 		}
 	}
@@ -114,21 +132,21 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 	// Check if the user is following the user to unfollow
 	if exists, err := rt.db.FollowExists(userId, followedId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if follow exists")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the follow exists.", http.StatusInternalServerError)
 		return
 	} else if !exists {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "Follow not found. Not following the user.", http.StatusNotFound)
 		return
 	}
 
 	// Try to unfollow the user
 	if err := rt.db.DeleteFollow(userId, followedId); err != nil {
 		ctx.Logger.WithError(err).Error("can't unfollow the user")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error unfollowing the user.", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(200)
+	w.WriteHeader(204)
 }
 
 func (rt *_router) checkFollowHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
@@ -136,7 +154,7 @@ func (rt *_router) checkFollowHandler(w http.ResponseWriter, r *http.Request, ps
 	// Get the parameters
 	var userId, followedId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("followedId")); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Missing or invalid parameters.", http.StatusBadRequest)
 		return
 	} else {
 		userId, followedId = params[0], params[1]
@@ -144,7 +162,7 @@ func (rt *_router) checkFollowHandler(w http.ResponseWriter, r *http.Request, ps
 
 	// Authorization check
 	if !checkBearer(r.Header.Get("Authorization"), userId) {
-		w.WriteHeader(http.StatusUnauthorized)
+		http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 		return
 	}
 
@@ -152,13 +170,21 @@ func (rt *_router) checkFollowHandler(w http.ResponseWriter, r *http.Request, ps
 	exists, err := rt.db.FollowExists(userId, followedId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if follow exists")
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Error checking if the follow exists.", http.StatusInternalServerError)
 		return
 	}
 
-	if exists {
-		w.WriteHeader(200)
-	} else {
-		w.WriteHeader(404)
+	if !exists {
+		http.Error(w, "Not following the user.", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(Follow{Follower: userId, Followed: followedId})
+	if err != nil {
+		ctx.Logger.WithError(err).Error("can't encode the follow")
+		http.Error(w, "Error encoding the response body.", http.StatusInternalServerError)
+		return
 	}
 }
