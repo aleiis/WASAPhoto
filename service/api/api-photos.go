@@ -18,8 +18,8 @@ const ContentTypeJPEG = "image/jpeg"
 const ContentTypePNG = "image/png"
 
 type GlobalPhotoId struct {
-	Owner int64 `json:"ownerId"`
-	Id    int64 `json:"photoId"`
+	Owner int64 `json:"owner"`
+	Id    int64 `json:"id"`
 }
 
 type Photo struct {

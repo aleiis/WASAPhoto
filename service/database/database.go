@@ -69,10 +69,10 @@ type AppDatabaseI interface {
 	DeleteLike(ownerId int64, photoId int64, userId int64) error
 
 	CommentExists(photoOwner int64, photoId int64, commentId int64) (bool, error)
-	CreateComment(photoOwner int64, photoId int64, commentOwner int64, content string) error
+	CreateComment(photoOwner int64, photoId int64, commentOwner int64, content string) (int64, error)
 	DeleteComment(photoOwner int64, photoId int64, commentId int64) error
 	GetCommentOwner(photoOwner int64, photoId int64, commentId int64) (int64, error)
-	GetComments(photoOwner int64, photoId int64) ([]Comment, error)
+	GetPhotoComments(photoOwner int64, photoId int64) ([]Comment, error)
 
 	Ping() error
 }

@@ -21,7 +21,7 @@ type Username struct {
 }
 
 type User struct {
-	UserId   int64  `json:"userId"`
+	Id       int64  `json:"id"`
 	Username string `json:"username"`
 }
 
@@ -62,7 +62,7 @@ func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Check if the user ID of the path and the user ID of the body match
-	if userId != newUserResource.UserId {
+	if userId != newUserResource.Id {
 		http.Error(w, "User ID from the path and the body don't match.", http.StatusBadRequest)
 		return
 	}
@@ -140,7 +140,7 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 	}
 
 	userProfile.Owner = User{
-		UserId:   userId,
+		Id:       userId,
 		Username: username,
 	}
 
@@ -251,7 +251,7 @@ func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps
 			return
 		}
 		stream.Stream[i] = Photo{
-			Owner: User{UserId: userId,
+			Owner: User{Id: userId,
 				Username: username,
 			},
 			Id:       photo.PhotoId,
@@ -291,7 +291,7 @@ func (rt *_router) getUserByUsernameHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Get the user id
-	user.UserId, err = rt.db.GetUserId(user.Username)
+	user.Id, err = rt.db.GetUserId(user.Username)
 	if errors.Is(err, database.ErrUserNotFound) {
 		http.Error(w, "User not found.", http.StatusNotFound)
 		return

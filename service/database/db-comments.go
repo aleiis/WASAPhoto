@@ -5,8 +5,11 @@ import (
 )
 
 type Comment struct {
-	Owner   int64
-	Content string
+	PhotoOwner   int64
+	PhotoId      int64
+	CommentId    int64
+	CommentOwner int64
+	Content      string
 }
 
 func (db *AppDatabase) CommentExists(photoOwner int64, photoId int64, commentId int64) (bool, error) {
@@ -19,25 +22,25 @@ func (db *AppDatabase) CommentExists(photoOwner int64, photoId int64, commentId 
 	return count > 0, nil
 }
 
-func (db *AppDatabase) CreateComment(photoOwner int64, photoId int64, commentOwner int64, content string) error {
+func (db *AppDatabase) CreateComment(photoOwner int64, photoId int64, commentOwner int64, content string) (int64, error) {
 	if len(content) == 0 || len(content) > 128 {
-		return fmt.Errorf("the content must measure between 1 and 128 bytes")
+		return -1, fmt.Errorf("the content must measure between 1 and 128 bytes")
 	}
 
 	// Calculate the comment ID
-	var count int
+	var count int64
 	err := db.c.QueryRow(`SELECT COUNT(*) FROM comments WHERE photo_owner = ? AND photo_id = ?;`, photoOwner, photoId).Scan(&count)
 	if err != nil {
-		return fmt.Errorf("can't get the number of comments: %w", err)
+		return -1, fmt.Errorf("can't get the number of comments: %w", err)
 	}
 
 	// Insert the comment
 	_, err = db.c.Exec(`INSERT INTO comments (photo_owner, photo_id, comment_id, comment_owner, content) VALUES (?, ?, ?, ?, ?);`, photoOwner, photoId, count, commentOwner, content)
 	if err != nil {
-		return fmt.Errorf("can't insert the comment: %w", err)
+		return -1, fmt.Errorf("can't insert the comment: %w", err)
 	}
 
-	return nil
+	return count, nil
 }
 
 func (db *AppDatabase) DeleteComment(photoOwner int64, photoId int64, commentId int64) error {
@@ -64,10 +67,10 @@ func (db *AppDatabase) GetCommentOwner(photoOwner int64, photoId int64, commentI
 	return commentOwner, nil
 }
 
-func (db *AppDatabase) GetComments(photoOwner int64, photoId int64) ([]Comment, error) {
+func (db *AppDatabase) GetPhotoComments(photoOwner int64, photoId int64) ([]Comment, error) {
 
 	// Get the comments of the photo
-	rows, err := db.c.Query(`SELECT comment_owner, content FROM comments WHERE photo_owner = ? AND photo_id = ?;`, photoOwner, photoId)
+	rows, err := db.c.Query(`SELECT * FROM comments WHERE photo_owner = ? AND photo_id = ?;`, photoOwner, photoId)
 	if err != nil {
 		return nil, fmt.Errorf("can't get the comments of the photo: %w", err)
 	}
@@ -77,7 +80,7 @@ func (db *AppDatabase) GetComments(photoOwner int64, photoId int64) ([]Comment, 
 	var comments []Comment
 	for rows.Next() {
 		var comment Comment
-		if err := rows.Scan(&comment.Owner, &comment.Content); err != nil {
+		if err := rows.Scan(&comment.PhotoOwner, &comment.PhotoId, &comment.CommentId, &comment.CommentOwner, &comment.Content); err != nil {
 			return nil, err
 		}
 		comments = append(comments, comment)

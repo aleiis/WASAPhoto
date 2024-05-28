@@ -95,6 +95,15 @@ func checkUsernameFormat(username string) bool {
 	return true
 }
 
+// checkCommentContentFormat checks if the given comment content is valid
+func checkCommentContentFormat(content string) bool {
+
+	// minLength: 1
+	// maxLength: 128
+	// pattern: .*
+	return len(content) > 0 && len(content) <= 128
+}
+
 // checkBan checks if the user identified by the Authorization header is banned by the user identified by the userId.
 // It returns true if the user is banned, false otherwise.
 // If the Bearer token is invalid, it will return the error ErrInvalidBearer.

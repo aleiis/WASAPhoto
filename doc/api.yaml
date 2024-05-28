@@ -618,7 +618,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Comment'
+              $ref: '#/components/schemas/CommentRequest'
         required: true
       responses:
         '201':
@@ -815,24 +815,36 @@ components:
       type: integer
       format: int64
       example: 0
+    CommentContent:
+      title: CommentContent
+      description: Content of the comment
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: .*
+      example: "Hey!"
     Comment:
       title: Comment
       description: Comment resource
       type: object
       properties:
+        owner:
+          $ref: '#/components/schemas/User'
         photo:
           $ref: '#/components/schemas/GlobalPhotoId'
         id:
           $ref: '#/components/schemas/PhotoCommentId'
+        content:
+          $ref: '#/components/schemas/CommentContent'
+    CommentRequest:
+      title: CommentRequest
+      description: Information needed to post a comment
+      type: object
+      properties:
         owner:
           $ref: '#/components/schemas/UserId'
         content:
-          description: Content of the comment
-          type: string
-          minLength: 1
-          maxLength: 128
-          pattern: .*
-          example: "Hey!"
+          $ref: '#/components/schemas/CommentContent'
     Profile:
         title: Profile
         description: Profile of a user
