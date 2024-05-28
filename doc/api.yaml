@@ -277,6 +277,8 @@ paths:
       responses:
         '204':
           description: Photo deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':

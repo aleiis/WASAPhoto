@@ -232,9 +232,29 @@ func (db *AppDatabase) GetPhotoAbsolutePath(userId int64, photoId int64) (string
 
 	photoPath = filepath.FromSlash(photoPath)
 	photoPath = filepath.Join(filepath.Dir(db.dsn), "images", photoPath)
-	if !filepath.IsAbs(photoPath) {
-		filepath.Abs(photoPath)
+	if filepath.IsAbs(photoPath) {
+		return photoPath, nil
+	}
+
+	photoPath, err = filepath.Abs(photoPath)
+	if err != nil {
+		return "", fmt.Errorf("can't get the absolute path: %w", err)
 	}
 
 	return photoPath, nil
+}
+
+func (db *AppDatabase) GetMostRecentPhoto(userId int64) (Photo, error) {
+
+	var photo Photo
+	err := db.c.QueryRow(`SELECT * FROM photos WHERE user_id = ? ORDER BY date DESC LIMIT 1;`, userId).Scan(&photo.UserId, &photo.PhotoId, &photo.Path, &photo.Date)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Photo{}, errors.New("no photos found")
+		} else {
+			return Photo{}, err
+		}
+	}
+
+	return photo, nil
 }

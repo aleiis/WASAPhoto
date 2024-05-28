@@ -61,7 +61,7 @@ func (db *AppDatabase) SetUsername(userID int64, newUsername string) error {
 
 	// Check if the new username already exists
 	_, err := db.GetUserId(newUsername)
-	if err != ErrUserNotFound {
+	if !errors.Is(err, ErrUserNotFound) {
 		if err == nil {
 			return ErrUsernameAlreadyExists
 		} else {

@@ -13,10 +13,10 @@ func (rt *_router) liveness(w http.ResponseWriter, r *http.Request, ps httproute
 
 	// Check if the database is ready
 	if err := rt.db.Ping(); err != nil {
-		http.Error(w, "Database is not ready", http.StatusInternalServerError)
+		http.Error(w, "Database is not ready.", http.StatusInternalServerError)
 		return
 	}
 
 	// If everything is ready, reply with HTTP Status 200
-	w.WriteHeader(http.StatusOK)
+	info(w, "API server is ready.")
 }

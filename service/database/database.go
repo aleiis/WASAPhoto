@@ -54,6 +54,7 @@ type AppDatabaseI interface {
 	GetUserPhotos(userId int64) ([]Photo, error)
 	GetPhotoStats(userId int64, photoId int64) (int64, int64, error)
 	GetPhotoAbsolutePath(userId int64, photoId int64) (string, error)
+	GetMostRecentPhoto(userId int64) (Photo, error)
 
 	FollowExists(userId int64, followUserId int64) (bool, error)
 	CreateFollow(userId int64, followUserId int64) error
