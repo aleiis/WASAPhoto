@@ -79,6 +79,9 @@ func (db *AppDatabase) GetPhotoComments(photoOwner int64, photoId int64) ([]Comm
 	// Scan the photos from the query result
 	var comments []Comment
 	for rows.Next() {
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("can't scan the comments: %w", err)
+		}
 		var comment Comment
 		if err := rows.Scan(&comment.PhotoOwner, &comment.PhotoId, &comment.CommentId, &comment.CommentOwner, &comment.Content); err != nil {
 			return nil, err

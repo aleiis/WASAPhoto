@@ -126,6 +126,9 @@ func (db *AppDatabase) GetUserStream(userId int64) ([]Photo, error) {
 
 	var photos []Photo
 	for rows.Next() {
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("can't scan the photos: %w", err)
+		}
 		var photo Photo
 		if err := rows.Scan(&photo.UserId, &photo.PhotoId, &photo.Path, &photo.Date); err != nil {
 			return nil, fmt.Errorf("can't scan the photo: %w", err)

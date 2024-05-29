@@ -64,7 +64,12 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 	if err != nil {
 		return fmt.Errorf("can't begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func(tx *sql.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+			return
+		}
+	}(tx)
 
 	// Insert the photo data
 	relativePath := filepath.Join(fmt.Sprint(userId), photoFilename)
@@ -137,7 +142,12 @@ func (db *AppDatabase) DeletePhoto(userId int64, photoId int64) error {
 	if err != nil {
 		return fmt.Errorf("can't begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func(tx *sql.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+			return
+		}
+	}(tx)
 
 	// Delete the photo from the database
 	_, err = tx.Exec(`DELETE FROM photos WHERE user_id = ? AND photo_id = ?;`, userId, photoId)
@@ -194,6 +204,9 @@ func (db *AppDatabase) GetUserPhotos(userId int64) ([]Photo, error) {
 	// Scan the photos from the query result
 	var photos []Photo
 	for rows.Next() {
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("can't scan the photos: %w", err)
+		}
 		var photo Photo
 		if err := rows.Scan(&photo.UserId, &photo.PhotoId, &photo.Path, &photo.Date); err != nil {
 			return nil, err
