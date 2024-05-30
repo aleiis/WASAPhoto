@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,14 +37,17 @@ func loadConfig() (WebAPIConfig, error) {
 
 	// Parse the config struct from the environment variables and command line arguments
 	if err := conf.Parse(os.Args[1:], "WASAPHOTO", &cfg); err != nil {
-		if errors.Is(err, conf.ErrHelpWanted) {
-			usage, err := conf.Usage("WASAPHOTO", &cfg)
-			if err != nil {
-				return cfg, fmt.Errorf("generating config usage message: %w", err)
+		// Print help message
+		/*
+			if errors.Is(err, conf.ErrHelpWanted) {
+				usage, err := conf.Usage("WASAPHOTO", &cfg)
+				if err != nil {
+					return cfg, fmt.Errorf("generating config usage message: %w", err)
+				}
+				fmt.Println(usage)
+				return cfg, conf.ErrHelpWanted
 			}
-			fmt.Println(usage)
-			return cfg, conf.ErrHelpWanted
-		}
+		*/
 		return cfg, fmt.Errorf("parsing config: %w", err)
 	}
 

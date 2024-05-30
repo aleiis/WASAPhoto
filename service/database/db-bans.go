@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 )
@@ -32,7 +33,12 @@ func (db *AppDatabase) CreateBan(userId int64, bannedUserId int64) error {
 	if err != nil {
 		return fmt.Errorf("can't start a transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func(tx *sql.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+			return
+		}
+	}(tx)
 
 	// Check if the banned user was following the user
 	var count int
