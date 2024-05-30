@@ -12,14 +12,14 @@ import (
 const maxCommentCount = 100000
 
 type Comment struct {
-	Owner   User          `json:"owner"`
-	Photo   GlobalPhotoId `json:"photo"`
-	Id      int64         `json:"id"`
-	Content string        `json:"content"`
+	Owner     User          `json:"owner"`
+	Photo     GlobalPhotoId `json:"photo"`
+	CommentId int64         `json:"comment_id"`
+	Content   string        `json:"content"`
 }
 
 type CommentRequest struct {
-	Owner   int64  `json:"owner"`
+	OwnerId int64  `json:"owner_id"`
 	Content string `json:"content"`
 }
 
@@ -46,7 +46,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Authorization check
-	if !checkBearer(r.Header.Get("Authorization"), commentRequest.Owner) {
+	if !checkBearer(r.Header.Get("Authorization"), commentRequest.OwnerId) {
 		http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 		return
 	}
@@ -62,7 +62,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Check if the user ID of the user who commented the photo exists
-	if exists, err := rt.db.UserExists(commentRequest.Owner); err != nil {
+	if exists, err := rt.db.UserExists(commentRequest.OwnerId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user exists")
 		http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
 		return
@@ -78,7 +78,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Try to create the comment
-	newCommentId, err := rt.db.CreateComment(photoOwner, photoId, commentRequest.Owner, commentRequest.Content)
+	newCommentId, err := rt.db.CreateComment(photoOwner, photoId, commentRequest.OwnerId, commentRequest.Content)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't create the comment")
 		http.Error(w, "Error creating the comment.", http.StatusInternalServerError)
@@ -86,8 +86,8 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	var commentOwner User
-	commentOwner.Id = commentRequest.Owner
-	commentOwner.Username, err = rt.db.GetUsername(commentRequest.Owner)
+	commentOwner.UserId = commentRequest.OwnerId
+	commentOwner.Username, err = rt.db.GetUsername(commentRequest.OwnerId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't get the username of the comment owner")
 		http.Error(w, "Error getting the username of the comment owner.", http.StatusInternalServerError)
@@ -95,10 +95,10 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	newComment := Comment{
-		Owner:   commentOwner,
-		Photo:   GlobalPhotoId{photoOwner, photoId},
-		Id:      newCommentId,
-		Content: commentRequest.Content,
+		Owner:     commentOwner,
+		Photo:     GlobalPhotoId{photoOwner, photoId},
+		CommentId: newCommentId,
+		Content:   commentRequest.Content,
 	}
 
 	w.WriteHeader(201)
@@ -217,10 +217,10 @@ func (rt *_router) getCommentsHandler(w http.ResponseWriter, r *http.Request, ps
 			return
 		}
 		photoComments.Comments[i] = Comment{
-			Owner:   User{Id: comment.CommentOwner, Username: username},
-			Photo:   GlobalPhotoId{photoOwner, photoId},
-			Id:      comment.CommentId,
-			Content: comment.Content,
+			Owner:     User{UserId: comment.CommentOwner, Username: username},
+			Photo:     GlobalPhotoId{photoOwner, photoId},
+			CommentId: comment.CommentId,
+			Content:   comment.Content,
 		}
 	}
 

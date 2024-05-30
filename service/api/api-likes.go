@@ -58,13 +58,13 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Check if the path parameters match the body parameters
-	if photoOwner != like.Photo.Owner || photoId != like.Photo.Id {
+	if photoOwner != like.Photo.OwnerId || photoId != like.Photo.PhotoId {
 		http.Error(w, "Photo ID mismatch. The photo ID in the URL must be the same as the one in the request body.", http.StatusBadRequest)
 		return
 	}
 
 	// Check if the user has already liked the photo
-	exists, err := rt.db.LikeExists(like.Photo.Owner, like.Photo.Id, like.Liker)
+	exists, err := rt.db.LikeExists(like.Photo.OwnerId, like.Photo.PhotoId, like.Liker)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the like exists")
 		http.Error(w, "Error checking if the like exists.", http.StatusInternalServerError)
@@ -75,7 +75,7 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Try to like the photo
-	err = rt.db.CreateLike(like.Photo.Owner, like.Photo.Id, like.Liker)
+	err = rt.db.CreateLike(like.Photo.OwnerId, like.Photo.PhotoId, like.Liker)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't like the photo")
 		http.Error(w, "Error liking the photo.", http.StatusInternalServerError)
@@ -162,7 +162,7 @@ func (rt *_router) checkLikeStatusHandler(w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(200)
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(Like{Liker: likerId, Photo: GlobalPhotoId{Owner: photoOwner, Id: photoId}})
+	err = json.NewEncoder(w).Encode(Like{Liker: likerId, Photo: GlobalPhotoId{OwnerId: photoOwner, PhotoId: photoId}})
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't encode the response")
 		http.Error(w, "Error encoding the response body.", http.StatusInternalServerError)

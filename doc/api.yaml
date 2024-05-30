@@ -739,7 +739,7 @@ components:
       description: User resource
       type: object
       properties:
-        id:
+        user_id:
           $ref: '#/components/schemas/UserId'
         username:
           $ref: '#/components/schemas/Username'
@@ -754,13 +754,10 @@ components:
       description: Global identifier of a photo. A photo is identified by the user's unique ID and the photo's unique ID per user.
       type: object
       properties:
-        owner:
+        owner_id:
           $ref: '#/components/schemas/UserId'
-        id:
+        photo_id:
           $ref: '#/components/schemas/UserPhotoId'
-      example:
-        owner: 13
-        id: 4
     Photo:
       title: Photo
       description: General information of a photo
@@ -768,16 +765,16 @@ components:
       properties:
         owner:
           $ref: '#/components/schemas/User'
-        id:
+        photo_id:
           $ref: '#/components/schemas/UserPhotoId'
         date:
           $ref: '#/components/schemas/Date'
-        likes:
+        total_likes:
           description: Number of likes of the photo
           type: integer
           format: int64
           minimum: 0
-        comments:
+        total_comments:
           description: Number of comments of the photo
           type: integer
           format: int64
@@ -809,12 +806,6 @@ components:
           $ref: '#/components/schemas/UserId'
         photo:
           $ref: '#/components/schemas/GlobalPhotoId'
-    PhotoCommentId:
-      title: PhotoCommentId
-      description: Identifier of a comment unique per photo. Each photo has its independent set of comment identifiers.
-      type: integer
-      format: int64
-      example: 0
     CommentContent:
       title: CommentContent
       description: Content of the comment
@@ -832,8 +823,11 @@ components:
           $ref: '#/components/schemas/User'
         photo:
           $ref: '#/components/schemas/GlobalPhotoId'
-        id:
-          $ref: '#/components/schemas/PhotoCommentId'
+        comment_id:
+          description: Identifier of a comment unique per photo. Each photo has its independent set of comment identifiers.
+          type: integer
+          format: int64
+          example: 0
         content:
           $ref: '#/components/schemas/CommentContent'
     CommentRequest:
@@ -841,7 +835,7 @@ components:
       description: Information needed to post a comment
       type: object
       properties:
-        owner:
+        owner_id:
           $ref: '#/components/schemas/UserId'
         content:
           $ref: '#/components/schemas/CommentContent'
@@ -889,7 +883,6 @@ components:
           maxItems: 100
           items:
             $ref: '#/components/schemas/Photo'
-
   parameters:
     user_id:
       name: user_id

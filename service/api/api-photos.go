@@ -18,16 +18,16 @@ const ContentTypeJPEG = "image/jpeg"
 const ContentTypePNG = "image/png"
 
 type GlobalPhotoId struct {
-	Owner int64 `json:"owner"`
-	Id    int64 `json:"id"`
+	OwnerId int64 `json:"owner_id"`
+	PhotoId int64 `json:"photo_id"`
 }
 
 type Photo struct {
-	Owner    User   `json:"owner"`
-	Id       int64  `json:"id"`
-	Date     string `json:"date"`
-	Likes    int64  `json:"likes"`
-	Comments int64  `json:"comments"`
+	Owner         User   `json:"owner"`
+	PhotoId       int64  `json:"photo_id"`
+	Date          string `json:"date"`
+	TotalLikes    int64  `json:"total_likes"`
+	TotalComments int64  `json:"total_comments"`
 }
 
 func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
@@ -91,7 +91,7 @@ func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps
 	// Write the Global Photo ID to the response
 	w.WriteHeader(201)
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(GlobalPhotoId{Owner: userId, Id: lastUpload.PhotoId})
+	err = json.NewEncoder(w).Encode(GlobalPhotoId{OwnerId: userId, PhotoId: lastUpload.PhotoId})
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't encode the global photo ID")
 		http.Error(w, "Error encoding the response body.", http.StatusInternalServerError)
