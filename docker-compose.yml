@@ -5,8 +5,8 @@ services:
     image: docker.io/aleiis/wasaphoto-backend:latest
     ports:
       - "3000:3000"
-    volumes:
-      - ./data:/data
+#    volumes:
+#      - ./data:/data
   frontend:
     image: docker.io/aleiis/wasaphoto-frontend:latest
     ports:

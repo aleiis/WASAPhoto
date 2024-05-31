@@ -1,4 +1,14 @@
 <script>
+import {checkLiveness} from "../utils/livenessCheck.js";
+
+export default {
+	mounted() {
+		checkLiveness()
+		.then(() => {
+			this.$router.push('/')
+		})
+	}
+}
 
 </script>
 
@@ -8,8 +18,8 @@
 			<img class="logo" src="/src/assets/logo.png"/>
 			<h1>WASAPhoto</h1>
 		</div>
-		<h3>404 - Page Not Found</h3>
-		<button @click="this.$router.push('/home')">Return to the home page</button>
+		<h3>We're sorry, but the service is currently unavailable. Please try again later.</h3>
+		<button @click="this.$router.push('/')">Retry</button>
 	</div>
 </template>
 

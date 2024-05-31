@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -48,7 +49,7 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 		return fmt.Errorf("can't get the number of photos: %w", err)
 	}
 
-	photoFilename := fmt.Sprintf("%d_%d.%s", userId, count, format)
+	photoFilename := fmt.Sprintf("%s.%s", uuid.New().String(), format)
 
 	// Check if all the folder structure exists
 	photoPath := filepath.Join(filepath.Dir(db.dsn), "images", fmt.Sprint(userId))
@@ -158,6 +159,12 @@ func (db *AppDatabase) DeletePhoto(userId int64, photoId int64) error {
 	// Delete the photo from the filesystem
 	if err := os.Remove(photoPath); err != nil {
 		return fmt.Errorf("can't delete the photo from the filesystem: %w", err)
+	}
+
+	// Update the photo IDs
+	_, err = tx.Exec(`UPDATE photos SET photo_id = photo_id - 1 WHERE user_id = ? AND photo_id > ?;`, userId, photoId)
+	if err != nil {
+		return fmt.Errorf("can't update the photo IDs: %w", err)
 	}
 
 	// Commit the transaction

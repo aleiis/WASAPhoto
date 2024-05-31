@@ -251,7 +251,7 @@ func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps
 			return
 		}
 		stream.Stream[i] = Photo{
-			Owner: User{UserId: userId,
+			Owner: User{UserId: photo.UserId,
 				Username: username,
 			},
 			PhotoId:       photo.PhotoId,

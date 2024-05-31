@@ -12,11 +12,11 @@ RUN go build -o /app/webapi ./cmd/webapi
 FROM debian:bookworm
 
 # Inform Docker about which port is used
-EXPOSE 3000
+EXPOSE 3000 4000
 
 # Inform Docker that we expect a volume on this
 # path (database)
-VOLUME /data
+# VOLUME /data
 
 # Copy the executable from the "builder" image
 WORKDIR /app/

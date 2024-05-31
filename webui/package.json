@@ -1,6 +1,7 @@
 {
 	"name": "wasaphoto",
 	"version": "0.0.0",
+	"type": "module",
 	"scripts": {
 		"dev": "vite",
 		"build-dev": "vite build --mode development",
