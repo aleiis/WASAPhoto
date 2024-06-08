@@ -46,7 +46,7 @@ export default {
 					}, 1000);
 				}
 			} catch (e) {
-				this.message = 'Error while updating the username: ' + (e.response ? e.response.data.message : e.message);
+				this.message = 'Error while updating the username: ' + (e.response ? e.response.data : e.message);
 				this.success = false;
 			}
 		}

@@ -12,7 +12,7 @@ export default {
 	methods: {
 		onFileChange(event) {
 			this.selectedFile = event.target.files[0];
-			this.disabled = this.selectedFile.type.includes('image') ? false : true;
+			this.disabled = !this.selectedFile.type.includes('image');
 		},
 		async uploadPhoto() {
 			if (!this.selectedFile) {
@@ -45,7 +45,7 @@ export default {
 					}, 2000);
 				}
 			} catch (e) {
-				this.message = 'Error uploading photo: ' + (e.response ? e.response.data.message : e.message);
+				this.message = 'Error uploading photo: ' + (e.response ? e.response.data : e.message);
 				this.success = false;
 			}
 		}

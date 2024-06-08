@@ -115,7 +115,7 @@ func createSchema(db *sql.DB) error {
 	_, err = db.Exec(`
 			CREATE TABLE IF NOT EXISTS users (
 				user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-				username VARCHAR(16) UNIQUE NOT NULL
+				username VARCHAR(16) UNIQUE NOT NULL COLLATE NOCASE
 			);
 		`)
 	if err != nil {
