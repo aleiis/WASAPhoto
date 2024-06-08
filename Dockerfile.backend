@@ -21,6 +21,7 @@ EXPOSE 3000 4000
 # Copy the executable from the "builder" image
 WORKDIR /app/
 COPY --from=builder /app/webapi ./
+RUN chmod -R 777 /app
 RUN mkdir conf
 COPY ./demo/config.yml ./conf/
 

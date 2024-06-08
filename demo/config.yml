@@ -3,7 +3,7 @@
 configfile:
   path: "conf/config.yml"
 db:
-  filename: "/data/wasaphoto.db"
+  filename: "./data/wasaphoto.db"
 debug: false
 web:
   apihost: "0.0.0.0:3000"
