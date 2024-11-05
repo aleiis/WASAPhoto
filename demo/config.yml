@@ -1,13 +1,17 @@
 # This is the configuration file for the API service
 # Description of this part is present in the `main.go` file
-configfile:
-  path: "conf/config.yml"
-db:
-  filename: "./data/wasaphoto.db"
+
+# If a log file is not provided, stdout will be used
+# Folders will be created if they do not exist
+
+config_file: "config.yml"
+log_file: "wasaphoto/log/webapi.log"
 debug: false
+db:
+  filename: "wasaphoto/data/wasaphoto.db"
 web:
-  apihost: "0.0.0.0:3000"
-  debughost: "0.0.0.0:4000"
-  readtimeout: 5s
-  writetimeout: 5s
-  shutdowntimeout: 5s
+  api_host: "0.0.0.0:3000"
+  debug_host: "0.0.0.0:4000"
+  read_timeout: 5s
+  write_timeout: 5s
+  shutdown_timeout: 5s

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,20 +12,19 @@ import (
 )
 
 type WebAPIConfig struct {
-	ConfigFile struct {
-		Path string `conf:"default:conf/config.yml"`
-	}
-	DB struct {
-		Filename string `conf:"default:data/wasaphoto.db"`
-	}
-	Debug bool `conf:"default:false"`
-	Web   struct {
-		APIHost         string        `conf:"default:0.0.0.0:3000"`
-		DebugHost       string        `conf:"default:0.0.0.0:4000"`
-		ReadTimeout     time.Duration `conf:"default:5s"`
-		WriteTimeout    time.Duration `conf:"default:5s"`
-		ShutdownTimeout time.Duration `conf:"default:5s"`
-	}
+	ConfigFile string `conf:"default:config.yml" yaml:"config_file"`
+	LogFile    string `conf:"default:wasaphoto/log/webapi.log" yaml:"log_file"`
+	Debug      bool   `conf:"default:false" yaml:"debug"`
+	DB         struct {
+		Filename string `conf:"default:wasaphoto/data/wasaphoto.db" yaml:"filename"`
+	} `yaml:"db"`
+	Web struct {
+		APIHost         string        `conf:"default:0.0.0.0:3000" yaml:"api_host"`
+		DebugHost       string        `conf:"default:0.0.0.0:4000" yaml:"debug_host"`
+		ReadTimeout     time.Duration `conf:"default:5s" yaml:"read_timeout"`
+		WriteTimeout    time.Duration `conf:"default:5s" yaml:"write_timeout"`
+		ShutdownTimeout time.Duration `conf:"default:5s" yaml:"shutdown_timeout"`
+	} `yaml:"web"`
 }
 
 // loadConfig creates a WebAPIConfig starting from flags, environment variables and configuration file.
@@ -38,21 +38,19 @@ func loadConfig() (WebAPIConfig, error) {
 	// Parse the config struct from the environment variables and command line arguments
 	if err := conf.Parse(os.Args[1:], "WASAPHOTO", &cfg); err != nil {
 		// Print help message
-		/*
-			if errors.Is(err, conf.ErrHelpWanted) {
-				usage, err := conf.Usage("WASAPHOTO", &cfg)
-				if err != nil {
-					return cfg, fmt.Errorf("generating config usage message: %w", err)
-				}
-				fmt.Println(usage)
-				return cfg, conf.ErrHelpWanted
+		if errors.Is(err, conf.ErrHelpWanted) {
+			usage, err := conf.Usage("WASAPHOTO", &cfg)
+			if err != nil {
+				return cfg, fmt.Errorf("generating config usage message: %w", err)
 			}
-		*/
+			fmt.Println(usage)
+			return cfg, conf.ErrHelpWanted
+		}
 		return cfg, fmt.Errorf("parsing config: %w", err)
 	}
 
 	// Override values from YAML config file
-	fp, err := os.Open(cfg.ConfigFile.Path)
+	fp, err := os.Open(cfg.ConfigFile)
 	if err != nil && !os.IsNotExist(err) {
 		return cfg, fmt.Errorf("can't open the config file: %w", err)
 	} else if err == nil {

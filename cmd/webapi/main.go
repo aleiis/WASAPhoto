@@ -72,7 +72,21 @@ func run() error {
 
 	// Create the logger
 	logger := logrus.New()
-	logger.SetOutput(os.Stdout)
+	if cfg.LogFile != "" {
+		if err := os.MkdirAll(filepath.Dir(cfg.LogFile), 0755); err != nil {
+			logger.WithError(err).Error("can't create the log directory")
+			return fmt.Errorf("can't create the log directory: %w", err)
+		}
+		file, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			logger.WithError(err).Error("can't open the log file")
+			return fmt.Errorf("can't open the log file: %w", err)
+		}
+		defer file.Close()
+		logger.SetOutput(file)
+	} else {
+		logger.SetOutput(os.Stdout)
+	}
 	if cfg.Debug {
 		logger.SetLevel(logrus.DebugLevel)
 	} else {
