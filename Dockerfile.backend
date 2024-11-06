@@ -14,16 +14,9 @@ FROM debian:bookworm
 # Inform Docker about which port is used
 EXPOSE 3000 4000
 
-# Inform Docker that we expect a volume on this
-# path (database)
-# VOLUME /data
-
 # Copy the executable from the "builder" image
 WORKDIR /app/
 COPY --from=builder /app/webapi ./
-RUN chmod -R 777 /app
-RUN mkdir conf
-COPY ./demo/config.yml ./conf/
 
 # Set the default program to our Go backend
 CMD ["/app/webapi"]

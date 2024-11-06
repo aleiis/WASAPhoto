@@ -1,13 +1,19 @@
-version: '3'
-
 services:
   backend:
-    image: docker.io/aleiis/wasaphoto-backend:latest
+    image: docker.io/aleiis/wasaphoto-backend:v1.2
+    container_name: backend
     ports:
       - "3000:3000"
-#    volumes:
-#      - ./data:/data
+    environment:
+      - WASAPHOTO_CONFIG_FILE=/config.yml
+    volumes:
+      - ./config.yml:/config.yml
+      - wasaphoto-data:/wasaphoto
   frontend:
-    image: docker.io/aleiis/wasaphoto-frontend:latest
+    image: docker.io/aleiis/wasaphoto-frontend:v1.1
+    container_name: frontend
     ports:
       - "8080:80"
+
+volumes:
+  wasaphoto-data:

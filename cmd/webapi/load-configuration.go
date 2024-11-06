@@ -13,10 +13,10 @@ import (
 
 type WebAPIConfig struct {
 	ConfigFile string `conf:"default:config.yml" yaml:"config_file"`
-	LogFile    string `conf:"default:wasaphoto/log/webapi.log" yaml:"log_file"`
+	LogFile    string `conf:"default:/wasaphoto/log/webapi.log" yaml:"log_file"`
 	Debug      bool   `conf:"default:false" yaml:"debug"`
 	DB         struct {
-		Filename string `conf:"default:wasaphoto/data/wasaphoto.db" yaml:"filename"`
+		Filename string `conf:"default:/wasaphoto/data/wasaphoto.db" yaml:"filename"`
 	} `yaml:"db"`
 	Web struct {
 		APIHost         string        `conf:"default:0.0.0.0:3000" yaml:"api_host"`

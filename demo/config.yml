@@ -5,10 +5,10 @@
 # Folders will be created if they do not exist
 
 config_file: "config.yml"
-log_file: "wasaphoto/log/webapi.log"
+log_file: "/wasaphoto/log/webapi.log"
 debug: false
 db:
-  filename: "wasaphoto/data/wasaphoto.db"
+  filename: "/wasaphoto/data/wasaphoto.db"
 web:
   api_host: "0.0.0.0:3000"
   debug_host: "0.0.0.0:4000"
