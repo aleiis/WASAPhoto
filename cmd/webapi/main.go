@@ -33,6 +33,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/aleiis/WASAPhoto/service/api"
 	"github.com/aleiis/WASAPhoto/service/database"
@@ -119,6 +120,13 @@ func run() error {
 		logger.WithError(err).Error("error creating AppDatabase")
 		return fmt.Errorf("creating AppDatabase: %w", err)
 	}
+
+	// Creates a context that will be used to cancel the logging goroutine
+	ctx, cancelLogging := context.WithCancel(context.Background())
+	defer cancelLogging() // Ensure the context is canceled when the function returns
+
+	// Start the periodic logging of the database
+	go database.StartPeriodicLogging(ctx, dbconn, time.Minute, cfg.DB.LogFile)
 
 	// Start (main) API server
 	logger.Info("initializing API server")

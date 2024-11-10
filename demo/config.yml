@@ -9,6 +9,7 @@ log_file: "/wasaphoto/log/webapi.log"
 debug: false
 db:
   filename: "/wasaphoto/data/wasaphoto.db"
+  log_file: "/wasaphoto/log/db.log"
 web:
   api_host: "0.0.0.0:3000"
   debug_host: "0.0.0.0:4000"
