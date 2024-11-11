@@ -6,7 +6,7 @@ WORKDIR /src/
 COPY . .
 
 # Build executables (in "builder")
-RUN go build -o /app/webapi ./cmd/webapi
+RUN go build -tags "sqlite_dbstat_vtab" -o /app/webapi ./cmd/webapi
 
 # Create final container
 FROM debian:bookworm
