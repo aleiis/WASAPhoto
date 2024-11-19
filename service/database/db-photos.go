@@ -4,12 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"os"
 	"path/filepath"
+
+	"github.com/aleiis/WASAPhoto/service/config"
+
+	"github.com/google/uuid"
 )
 
 var ErrPhotoNotFound = errors.New("photo not found")
@@ -34,6 +37,8 @@ func (db *AppDatabase) PhotoExists(userId int64, photoId int64) (bool, error) {
 
 func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string) error {
 
+	cfg, _ := config.GetConfig()
+
 	// Check if the user exists
 	exists, err := db.UserExists(userId)
 	if err != nil {
@@ -52,7 +57,7 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 	photoFilename := fmt.Sprintf("%s.%s", uuid.New().String(), format)
 
 	// Check if all the folder structure exists
-	photoPath := filepath.Join(filepath.Dir(db.dsn), "images", fmt.Sprint(userId))
+	photoPath := filepath.Join(cfg.ImageStorage.Path, fmt.Sprint(userId))
 	if _, err := os.Stat(photoPath); os.IsNotExist(err) {
 		if err := os.MkdirAll(photoPath, 0755); err != nil {
 			return fmt.Errorf("can't create the folder structure for user with id %d: %w", userId, err)
@@ -75,7 +80,7 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 	// Insert the photo data
 	relativePath := filepath.Join(fmt.Sprint(userId), photoFilename)
 	relativePath = filepath.ToSlash(relativePath)
-	_, err = tx.Exec(`INSERT INTO photos (user_id, photo_id, path, date) VALUES (?, ?, ?, datetime('now'));`, userId, count, relativePath)
+	_, err = tx.Exec(`INSERT INTO photos (user_id, photo_id, path, date) VALUES (?, ?, ?, NOW());`, userId, count, relativePath)
 	if err != nil {
 		return fmt.Errorf("can't insert photo data: %w", err)
 	}
@@ -121,6 +126,8 @@ func (db *AppDatabase) UploadPhoto(userId int64, img image.Image, format string)
 
 func (db *AppDatabase) DeletePhoto(userId int64, photoId int64) error {
 
+	cfg, _ := config.GetConfig()
+
 	// Check if the photo exists
 	if exists, err := db.PhotoExists(userId, photoId); err != nil {
 		return fmt.Errorf("can't check if the photo exists: %w", err)
@@ -136,7 +143,7 @@ func (db *AppDatabase) DeletePhoto(userId int64, photoId int64) error {
 	}
 
 	photoPath = filepath.FromSlash(photoPath)
-	photoPath = filepath.Join(filepath.Dir(db.dsn), "images", photoPath)
+	photoPath = filepath.Join(cfg.ImageStorage.Path, photoPath)
 
 	// Start a transaction
 	tx, err := db.c.Begin()
@@ -240,6 +247,8 @@ func (db *AppDatabase) GetPhotoStats(userId int64, photoId int64) (int64, int64,
 
 func (db *AppDatabase) GetPhotoAbsolutePath(userId int64, photoId int64) (string, error) {
 
+	cfg, _ := config.GetConfig()
+
 	var photoPath string
 	err := db.c.QueryRow(`SELECT path FROM photos WHERE user_id = ? AND photo_id = ?;`, userId, photoId).Scan(&photoPath)
 	if err != nil {
@@ -251,7 +260,7 @@ func (db *AppDatabase) GetPhotoAbsolutePath(userId int64, photoId int64) (string
 	}
 
 	photoPath = filepath.FromSlash(photoPath)
-	photoPath = filepath.Join(filepath.Dir(db.dsn), "images", photoPath)
+	photoPath = filepath.Join(cfg.ImageStorage.Path, photoPath)
 	if filepath.IsAbs(photoPath) {
 		return photoPath, nil
 	}

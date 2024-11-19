@@ -1,7 +1,20 @@
 services:
+  database:
+    image: mysql
+    container_name: wasaphoto-database
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'wasaphoto'
+      MYSQL_USER: 'admin'
+      MYSQL_PASSWORD: 'admin'
+      MYSQL_ROOT_PASSWORD: 'root'
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-database:/var/lib/mysql
   backend:
     image: docker.io/aleiis/wasaphoto-backend:v1.3
-    container_name: backend
+    container_name: wasaphoto-backend
     ports:
       - "3000:3000"
     environment:
@@ -11,9 +24,10 @@ services:
       - wasaphoto-data:/app/wasaphoto
   frontend:
     image: docker.io/aleiis/wasaphoto-frontend:v1.1
-    container_name: frontend
+    container_name: wasaphoto-frontend
     ports:
       - "8080:80"
 
 volumes:
+  mysql-database:
   wasaphoto-data:

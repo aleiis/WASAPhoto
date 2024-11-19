@@ -33,13 +33,13 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-	"time"
 
 	"github.com/aleiis/WASAPhoto/service/api"
+	"github.com/aleiis/WASAPhoto/service/config"
 	"github.com/aleiis/WASAPhoto/service/database"
 
 	"github.com/ardanlabs/conf"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/sirupsen/logrus"
 )
 
@@ -63,7 +63,7 @@ func main() {
 func run() error {
 
 	// Load the configuration
-	cfg, err := loadConfig()
+	cfg, err := config.GetConfig()
 	if err != nil {
 		if errors.Is(err, conf.ErrHelpWanted) {
 			return nil
@@ -97,14 +97,10 @@ func run() error {
 	logger.Infof("starting the application")
 	logger.Infof("configuration loaded")
 
-	// Check if all the folder structure exists
-	if err := os.MkdirAll(filepath.Dir(cfg.DB.Filename), 0755); err != nil {
-		logger.WithError(err).Error("can't create the folder structure for the database")
-		return fmt.Errorf("can't create the folder structure for the database: %w", err)
-	}
-
 	// Create or open the database
-	dbconn, err := sql.Open("sqlite3", cfg.DB.Filename+"?_foreign_keys=1")
+	logger.Info("initializing database")
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", cfg.DB.User, cfg.DB.Password, cfg.DB.Address, cfg.DB.Database)
+	dbconn, err := sql.Open("mysql", dsn)
 	if err != nil {
 		logger.WithError(err).Error("error opening SQLite DB")
 		return fmt.Errorf("can't open the database: %w", err)
@@ -115,18 +111,18 @@ func run() error {
 		_ = dbconn.Close()
 	}()
 
-	db, err := database.New(dbconn, cfg.DB.Filename)
+	db, err := database.New(dbconn, dsn)
 	if err != nil {
 		logger.WithError(err).Error("error creating AppDatabase")
 		return fmt.Errorf("creating AppDatabase: %w", err)
 	}
 
 	// Creates a context that will be used to cancel the logging goroutine
-	ctx, cancelLogging := context.WithCancel(context.Background())
-	defer cancelLogging() // Ensure the context is canceled when the function returns
+	//ctx, cancelLogging := context.WithCancel(context.Background())
+	//defer cancelLogging() // Ensure the context is canceled when the function returns
 
 	// Start the periodic logging of the database
-	go database.StartPeriodicLogging(ctx, dbconn, time.Minute, cfg.DB.LogFile)
+	// TO-DO: go database.StartPeriodicLogging(ctx, dbconn, time.Minute, "cfg.DB.LogFile")
 
 	// Start (main) API server
 	logger.Info("initializing API server")
