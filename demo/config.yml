@@ -7,9 +7,13 @@
 config_file: "config.yml"
 log_file: "/app/wasaphoto/log/webapi.log"
 debug: false
+image_storage:
+  path: "/app/wasaphoto/images"
 db:
-  filename: "/app/wasaphoto/data/wasaphoto.db"
-  log_file: "/app/wasaphoto/log/db.log"
+  user: "root"
+  password: "root"
+  address: "127.0.0.1:3306"
+  database: "wasaphoto"
 web:
   api_host: "0.0.0.0:3000"
   debug_host: "0.0.0.0:4000"
