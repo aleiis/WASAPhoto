@@ -9,15 +9,6 @@ log_file: "/app/wasaphoto/log/webapi.log"
 
 # If debug is set to true, the log level will be set to debug
 debug: false
-<<<<<<< HEAD
-image_storage:
-  path: "/app/wasaphoto/images"
-db:
-  user: "root"
-  password: "root"
-  address: "127.0.0.1:3306"
-  database: "wasaphoto"
-=======
 
 # The image storage path is the path where the images will be stored
 image_storage:
@@ -36,7 +27,6 @@ db:
     address: "localhost"
 
 # The web configuration is used to configure the API service
->>>>>>> ea8d0c4 (hector)
 web:
   api_host: "0.0.0.0:3000"
   debug_host: "0.0.0.0:4000"
