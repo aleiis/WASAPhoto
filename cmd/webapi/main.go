@@ -42,7 +42,44 @@ import (
 	"github.com/ardanlabs/conf"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/sirupsen/logrus"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
+
+func newExporter() (trace.SpanExporter, error) {
+	return stdouttrace.New()
+}
+
+func newTraceProvider() (*sdktrace.TracerProvider, error) {
+
+	exp, err := newExporter()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the exporter: %w", err)
+	}
+
+	// Ensure default SDK resources and the required service name are set.
+	r, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("webapi"),
+		),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+		sdktrace.WithResource(r),
+	), nil
+}
 
 // main is the program entry point. The only purpose of this function is to call run() and set the exit code if there is
 // any error
@@ -97,6 +134,18 @@ func run() error {
 
 	logger.Infof("starting the application")
 	logger.Infof("configuration loaded")
+
+	// Create a new tracer provider with a batch span processor and the given exporter.
+	tp, err := newTraceProvider()
+	if err != nil {
+		logger.WithError(err).Error("failed to create the OpenTelemetry trace provider")
+		return fmt.Errorf("creating OpenTelemetry trace provider: %w", err)
+	} else {
+		// Handle shutdown properly so nothing leaks.
+		defer func() { _ = tp.Shutdown(context.Background()) }()
+		otel.SetTracerProvider(tp)
+		logger.Info("OpenTelemetry trace provider created")
+	}
 
 	// Create or open the database
 	logger.Info("initializing database")
