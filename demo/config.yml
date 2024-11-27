@@ -1,12 +1,15 @@
 # This is the configuration file for the API service
 # Description of this part is present in the `main.go` file
 
-# If a log file is not provided, stdout will be used
-# Folders will be created if they do not exist
-
 config_file: "config.yml"
+
+# If a log file is not provided, stdout will be used.
+# Folders will be created if they do not exist.
 log_file: "/app/wasaphoto/log/webapi.log"
+
+# If debug is set to true, the log level will be set to debug
 debug: false
+<<<<<<< HEAD
 image_storage:
   path: "/app/wasaphoto/images"
 db:
@@ -14,6 +17,26 @@ db:
   password: "root"
   address: "127.0.0.1:3306"
   database: "wasaphoto"
+=======
+
+# The image storage path is the path where the images will be stored
+image_storage:
+  path: "/app/wasaphoto/images"
+
+# The database configuration is used to connect to the MySQL database
+db:
+  user: "admin"
+  password: "admin"
+  address: "localhost:3306"
+  database: "wasaphoto"
+  mysql_exporter:
+    enabled: false
+    user: "exporter"
+    password: "exporter"
+    address: "localhost"
+
+# The web configuration is used to configure the API service
+>>>>>>> ea8d0c4 (hector)
 web:
   api_host: "0.0.0.0:3000"
   debug_host: "0.0.0.0:4000"

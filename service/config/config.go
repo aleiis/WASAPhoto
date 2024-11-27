@@ -26,10 +26,16 @@ type WebAPIConfig struct {
 		Path string `conf:"default:wasaphoto/images" yaml:"path"`
 	} `yaml:"image_storage"`
 	DB struct {
-		User     string `conf:"default:root" yaml:"user"`
-		Password string `conf:"default:root" yaml:"password"`
-		Address  string `conf:"default:127.0.0.1:3306" yaml:"address"`
-		Database string `conf:"default:wasaphoto" yaml:"database"`
+		User          string `conf:"default:root" yaml:"user"`
+		Password      string `conf:"default:root" yaml:"password"`
+		Address       string `conf:"default:127.0.0.1:3306" yaml:"address"`
+		Name          string `conf:"default:wasaphoto" yaml:"database"`
+		MySQLExporter struct {
+			Enabled  bool   `conf:"default:false" yaml:"enabled"`
+			User     string `conf:"default:exporter" yaml:"user"`
+			Password string `conf:"default:exporter" yaml:"password"`
+			Address  string `conf:"default:localhost" yaml:"address"`
+		} `yaml:"mysql_exporter"`
 	} `yaml:"db"`
 	Web struct {
 		APIHost         string        `conf:"default:0.0.0.0:3000" yaml:"api_host"`

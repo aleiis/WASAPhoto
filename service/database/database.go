@@ -1,16 +1,12 @@
 package database
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"image"
-	"os"
-	"path/filepath"
-	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/aleiis/WASAPhoto/service/config"
 )
 
 type AppDatabaseI interface {
@@ -86,6 +82,8 @@ func New(db *sql.DB, dsn string) (AppDatabaseI, error) {
 
 func createSchema(db *sql.DB) error {
 	var err error
+
+	cfg, _ := config.GetConfig()
 
 	_, err = db.Exec(`
 			CREATE TABLE IF NOT EXISTS users (
@@ -194,93 +192,23 @@ func createSchema(db *sql.DB) error {
 		return err
 	}
 
+	if cfg.DB.MySQLExporter.Enabled {
+		stmt := fmt.Sprintf("CREATE USER '%s'@'%s' IDENTIFIED BY '%s' WITH MAX_USER_CONNECTIONS 3;", cfg.DB.MySQLExporter.User, cfg.DB.MySQLExporter.Address, cfg.DB.MySQLExporter.Password)
+		_, err = db.Exec(stmt)
+		if err != nil {
+			return err
+		}
+
+		stmt = fmt.Sprintf("GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '%s'@'%s';", cfg.DB.MySQLExporter.User, cfg.DB.MySQLExporter.Address)
+		_, err = db.Exec(stmt)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (db *AppDatabase) Ping() error {
 	return db.c.Ping()
-}
-
-func logDatabase(db *sql.DB, db_logger *logrus.Logger) {
-	_, err := db.Exec("CREATE VIRTUAL TABLE IF NOT EXISTS temp.stat USING dbstat(main)")
-	if err != nil {
-		db_logger.WithError(err).Errorf("Error creating virtual table")
-		return
-	}
-
-	query := `SELECT name, pageno, pagetype, ncell, payload, unused, mx_payload, pgoffset, pgsize 
-              FROM dbstat`
-
-	rows, err := db.Query(query)
-	if err != nil {
-		db_logger.WithError(err).Errorf("Error executing dbstat query")
-		return
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var (
-			name, pagetype                                              sql.NullString
-			pageno, ncell, payload, unused, mxPayload, pgOffset, pgSize sql.NullInt64
-		)
-
-		err := rows.Scan(&name, &pageno, &pagetype, &ncell, &payload, &unused, &mxPayload, &pgOffset, &pgSize)
-		if err != nil {
-			db_logger.WithError(err).Errorf("Error scanning dbstat row")
-			continue
-		}
-
-		db_logger.WithFields(logrus.Fields{
-			"name":      name.String,
-			"pageno":    pageno.Int64,
-			"pagetype":  pagetype.String,
-			"ncell":     ncell.Int64,
-			"payload":   payload.Int64,
-			"unused":    unused.Int64,
-			"mxPayload": mxPayload.Int64,
-			"pgOffset":  pgOffset.Int64,
-			"pgSize":    pgSize.Int64,
-		}).Info("Logging dbstat entry")
-	}
-
-	if err := rows.Err(); err != nil {
-		db_logger.WithError(err).Errorf("Error iterating dbstat rows")
-	}
-}
-
-func StartPeriodicLogging(ctx context.Context, db *sql.DB, interval time.Duration, logFile string) {
-	db_logger := logrus.New()
-
-	if logFile != "" {
-		if err := os.MkdirAll(filepath.Dir(logFile), 0755); err != nil {
-			db_logger.WithError(err).Error("can't create the log directory")
-			return
-		}
-		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			db_logger.WithError(err).Error("can't open the log file")
-			return
-		}
-		defer file.Close()
-		db_logger.SetOutput(file)
-	} else {
-		db_logger.SetOutput(os.Stdout)
-	}
-
-	db_logger.SetLevel(logrus.InfoLevel)
-
-	db_logger.Info("Starting the database logging")
-
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			db_logger.Info("Stopping database logging...")
-			return
-		case <-ticker.C:
-			logDatabase(db, db_logger)
-		}
-	}
 }

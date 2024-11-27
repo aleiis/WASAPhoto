@@ -33,6 +33,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/aleiis/WASAPhoto/service/api"
 	"github.com/aleiis/WASAPhoto/service/config"
@@ -99,11 +100,24 @@ func run() error {
 
 	// Create or open the database
 	logger.Info("initializing database")
-	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", cfg.DB.User, cfg.DB.Password, cfg.DB.Address, cfg.DB.Database)
-	dbconn, err := sql.Open("mysql", dsn)
-	if err != nil {
-		logger.WithError(err).Error("error opening SQLite DB")
-		return fmt.Errorf("can't open the database: %w", err)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s", cfg.DB.User, cfg.DB.Password, cfg.DB.Address, cfg.DB.Name)
+	tries := 0
+	var dbconn *sql.DB
+	for {
+		dbconn, err = sql.Open("mysql", dsn)
+		pingErr := dbconn.Ping()
+		if err != nil || pingErr != nil {
+			if tries > 3 {
+				logger.WithError(pingErr).Error("error opening MySQL DB")
+				return fmt.Errorf("can't open the database: %w", pingErr)
+			}
+
+			logger.WithError(pingErr).Error("error opening MySQL DB, retrying")
+			tries++
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		break
 	}
 
 	defer func() {
@@ -116,13 +130,6 @@ func run() error {
 		logger.WithError(err).Error("error creating AppDatabase")
 		return fmt.Errorf("creating AppDatabase: %w", err)
 	}
-
-	// Creates a context that will be used to cancel the logging goroutine
-	//ctx, cancelLogging := context.WithCancel(context.Background())
-	//defer cancelLogging() // Ensure the context is canceled when the function returns
-
-	// Start the periodic logging of the database
-	// TO-DO: go database.StartPeriodicLogging(ctx, dbconn, time.Minute, "cfg.DB.LogFile")
 
 	// Start (main) API server
 	logger.Info("initializing API server")
