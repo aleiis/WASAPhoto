@@ -29,7 +29,10 @@ type PhotoComments struct {
 
 func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	// Get the parameters
+	otelctx, span := tracer.Start(r.Context(), "commentPhotoHandler")
+	defer span.End()
+
+	// Subspan: Parameter validation
 	var photoOwner, photoId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId")); err != nil {
 		http.Error(w, "Missing or invalid parameters.", http.StatusBadRequest)
@@ -52,7 +55,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Check if the photo exists
-	if exists, err := rt.db.PhotoExists(photoOwner, photoId); err != nil {
+	if exists, err := rt.db.PhotoExists(otelctx, photoOwner, photoId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the photo exists")
 		http.Error(w, "Error checking if the photo exists.", http.StatusInternalServerError)
 		return
@@ -62,7 +65,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Check if the user ID of the user who commented the photo exists
-	if exists, err := rt.db.UserExists(commentRequest.OwnerId); err != nil {
+	if exists, err := rt.db.UserExists(otelctx, commentRequest.OwnerId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user exists")
 		http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
 		return
@@ -78,7 +81,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Try to create the comment
-	newCommentId, err := rt.db.CreateComment(photoOwner, photoId, commentRequest.OwnerId, commentRequest.Content)
+	newCommentId, err := rt.db.CreateComment(otelctx, photoOwner, photoId, commentRequest.OwnerId, commentRequest.Content)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't create the comment")
 		http.Error(w, "Error creating the comment.", http.StatusInternalServerError)
@@ -87,7 +90,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 
 	var commentOwner User
 	commentOwner.UserId = commentRequest.OwnerId
-	commentOwner.Username, err = rt.db.GetUsername(commentRequest.OwnerId)
+	commentOwner.Username, err = rt.db.GetUsername(otelctx, commentRequest.OwnerId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't get the username of the comment owner")
 		http.Error(w, "Error getting the username of the comment owner.", http.StatusInternalServerError)
@@ -113,6 +116,9 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 
 func (rt *_router) uncommentPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "uncommentPhotoHandler")
+	defer span.End()
+
 	// Get the parameters
 	var photoOwner, photoId, commentId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId"), ps.ByName("commentId")); err != nil {
@@ -123,7 +129,7 @@ func (rt *_router) uncommentPhotoHandler(w http.ResponseWriter, r *http.Request,
 	}
 
 	// Check if the comment exists
-	if exists, err := rt.db.CommentExists(photoOwner, photoId, commentId); err != nil {
+	if exists, err := rt.db.CommentExists(otelctx, photoOwner, photoId, commentId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the comment exists")
 		http.Error(w, "Error checking if the comment exists.", http.StatusInternalServerError)
 		return
@@ -133,7 +139,7 @@ func (rt *_router) uncommentPhotoHandler(w http.ResponseWriter, r *http.Request,
 	}
 
 	// Get the user ID of the comment owner
-	commentOwner, err := rt.db.GetCommentOwner(photoOwner, photoId, commentId)
+	commentOwner, err := rt.db.GetCommentOwner(otelctx, photoOwner, photoId, commentId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't get the comment owner")
 		http.Error(w, "Error getting the comment owner.", http.StatusInternalServerError)
@@ -147,7 +153,7 @@ func (rt *_router) uncommentPhotoHandler(w http.ResponseWriter, r *http.Request,
 	}
 
 	// Try to delete the comment
-	err = rt.db.DeleteComment(photoOwner, photoId, commentId)
+	err = rt.db.DeleteComment(otelctx, photoOwner, photoId, commentId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't delete the comment")
 		http.Error(w, "Error deleting the comment.", http.StatusInternalServerError)
@@ -158,6 +164,9 @@ func (rt *_router) uncommentPhotoHandler(w http.ResponseWriter, r *http.Request,
 }
 
 func (rt *_router) getCommentsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "getCommentsHandler")
+	defer span.End()
 
 	// Get the parameters
 	var photoOwner, photoId int64
@@ -170,7 +179,7 @@ func (rt *_router) getCommentsHandler(w http.ResponseWriter, r *http.Request, ps
 
 	// Check if the user requesting the profile is not banned by the user whose profile is being requested
 	// The check is made using the Authorization header
-	banExists, err := checkBan(rt.db, r.Header.Get("Authorization"), photoOwner)
+	banExists, err := checkBan(otelctx, rt.db, r.Header.Get("Authorization"), photoOwner)
 	switch {
 	case errors.Is(err, ErrInvalidBearer):
 		http.Error(w, "Invalid Bearer token.", http.StatusUnauthorized)
@@ -185,7 +194,7 @@ func (rt *_router) getCommentsHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Check if the photo exists
-	if exists, err := rt.db.PhotoExists(photoOwner, photoId); err != nil {
+	if exists, err := rt.db.PhotoExists(otelctx, photoOwner, photoId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the photo exists")
 		http.Error(w, "Error checking if the photo exists.", http.StatusInternalServerError)
 		return
@@ -195,7 +204,7 @@ func (rt *_router) getCommentsHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Try to get the comments of the photo
-	comments, err := rt.db.GetPhotoComments(photoOwner, photoId)
+	comments, err := rt.db.GetPhotoComments(otelctx, photoOwner, photoId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't get the comments of the photo")
 		http.Error(w, "Error getting the comments of the photo.", http.StatusInternalServerError)
@@ -210,7 +219,7 @@ func (rt *_router) getCommentsHandler(w http.ResponseWriter, r *http.Request, ps
 	var photoComments PhotoComments
 	photoComments.Comments = make([]Comment, len(comments))
 	for i, comment := range comments {
-		username, err := rt.db.GetUsername(comment.CommentOwner)
+		username, err := rt.db.GetUsername(otelctx, comment.CommentOwner)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't get resolve the user of a comment")
 			http.Error(w, "Error getting the username of a comment owner.", http.StatusInternalServerError)

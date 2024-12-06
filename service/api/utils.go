@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/aleiis/WASAPhoto/service/database"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/aleiis/WASAPhoto/service/database"
 )
 
 // ErrInvalidBearer is returned when the Bearer token is invalid
@@ -107,12 +109,12 @@ func checkCommentContentFormat(content string) bool {
 // checkBan checks if the user identified by the Authorization header is banned by the user identified by the userId.
 // It returns true if the user is banned, false otherwise.
 // If the Bearer token is invalid, it will return the error ErrInvalidBearer.
-func checkBan(db database.AppDatabaseI, authHeader string, userId int64) (bool, error) {
+func checkBan(ctx context.Context, db database.AppDatabaseI, authHeader string, userId int64) (bool, error) {
 
 	requesterId, err := getUserIdFromBearer(authHeader)
 	if err != nil {
 		return false, err
 	}
 
-	return db.BanExists(userId, requesterId)
+	return db.BanExists(ctx, userId, requesterId)
 }

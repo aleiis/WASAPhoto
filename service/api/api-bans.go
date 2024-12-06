@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/julienschmidt/httprouter"
-	"net/http"
 )
 
 type Ban struct {
@@ -13,6 +14,9 @@ type Ban struct {
 }
 
 func (rt *_router) banUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "banUserHandler")
+	defer span.End()
 
 	// Get the parameters
 	var userId int64
@@ -38,7 +42,7 @@ func (rt *_router) banUserHandler(w http.ResponseWriter, r *http.Request, ps htt
 
 	// Check if both user IDs exist
 	for _, id := range []int64{userId, ban.BannedUser} {
-		exists, err := rt.db.UserExists(id)
+		exists, err := rt.db.UserExists(otelctx, id)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't check if the user exists")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -62,7 +66,7 @@ func (rt *_router) banUserHandler(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	// Check if the ban already exists
-	if exists, err := rt.db.BanExists(ban.BanIssuer, ban.BannedUser); err != nil {
+	if exists, err := rt.db.BanExists(otelctx, ban.BanIssuer, ban.BannedUser); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if ban already exists")
 		http.Error(w, "Error checking if the ban exists.", http.StatusInternalServerError)
 		return
@@ -72,7 +76,7 @@ func (rt *_router) banUserHandler(w http.ResponseWriter, r *http.Request, ps htt
 	}
 
 	// Try to ban the user
-	err := rt.db.CreateBan(ban.BanIssuer, ban.BannedUser)
+	err := rt.db.CreateBan(otelctx, ban.BanIssuer, ban.BannedUser)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't ban the user")
 		http.Error(w, "Error banning the user.", http.StatusInternalServerError)
@@ -90,6 +94,9 @@ func (rt *_router) banUserHandler(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func (rt *_router) unbanUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "unbanUserHandler")
+	defer span.End()
 
 	// Get the parameters
 	var userId, bannedId int64
@@ -109,7 +116,7 @@ func (rt *_router) unbanUserHandler(w http.ResponseWriter, r *http.Request, ps h
 
 	// Check if both user IDs exist
 	for _, id := range []int64{userId, bannedId} {
-		exists, err := rt.db.UserExists(id)
+		exists, err := rt.db.UserExists(otelctx, id)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't check if the user exists")
 			http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
@@ -121,7 +128,7 @@ func (rt *_router) unbanUserHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Check if the user was already banned
-	if exists, err := rt.db.BanExists(userId, bannedId); err != nil {
+	if exists, err := rt.db.BanExists(otelctx, userId, bannedId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if follow exists")
 		http.Error(w, "Error checking if the ban exists.", http.StatusInternalServerError)
 		return
@@ -131,7 +138,7 @@ func (rt *_router) unbanUserHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Try to unban the user
-	err := rt.db.DeleteBan(userId, bannedId)
+	err := rt.db.DeleteBan(otelctx, userId, bannedId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't unfollow the user")
 		http.Error(w, "Error unbanning the user.", http.StatusInternalServerError)
@@ -142,6 +149,9 @@ func (rt *_router) unbanUserHandler(w http.ResponseWriter, r *http.Request, ps h
 }
 
 func (rt *_router) checkBanHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "checkBanHandler")
+	defer span.End()
 
 	// Get the parameters
 	var userId, bannedId int64
@@ -159,7 +169,7 @@ func (rt *_router) checkBanHandler(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	// Check if the user has banned the user to check
-	exists, err := rt.db.BanExists(userId, bannedId)
+	exists, err := rt.db.BanExists(otelctx, userId, bannedId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the ban exists")
 		http.Error(w, "Error checking if the ban exists.", http.StatusInternalServerError)

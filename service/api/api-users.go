@@ -3,11 +3,12 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/url"
+
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/aleiis/WASAPhoto/service/database"
 	"github.com/julienschmidt/httprouter"
-	"net/http"
-	"net/url"
 )
 
 // maxStreamLength is the maximum number of photos that can be returned in a stream
@@ -38,6 +39,9 @@ type Stream struct {
 }
 
 func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "setMyUserNameHandler")
+	defer span.End()
 
 	// Get the parameters
 	var userId int64
@@ -74,7 +78,7 @@ func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Try to set the new username
-	if err := rt.db.SetUsername(userId, newUserResource.Username); err != nil {
+	if err := rt.db.SetUsername(otelctx, userId, newUserResource.Username); err != nil {
 		switch {
 		case errors.Is(err, database.ErrUserNotFound):
 			http.Error(w, "User not found.", http.StatusNotFound)
@@ -99,6 +103,9 @@ func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, 
 
 func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "getUserProfileHandler")
+	defer span.End()
+
 	// Get the parameters
 	var userId int64
 	params, err := checkIds(ps.ByName("userId"))
@@ -110,7 +117,7 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 
 	// Check if the user requesting the profile is not banned by the user whose profile is being requested
 	// The check is made using the Authorization header
-	banExists, err := checkBan(rt.db, r.Header.Get("Authorization"), userId)
+	banExists, err := checkBan(otelctx, rt.db, r.Header.Get("Authorization"), userId)
 	switch {
 	case errors.Is(err, ErrInvalidBearer):
 		http.Error(w, "Invalid Bearer token.", http.StatusUnauthorized)
@@ -127,7 +134,7 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 	var userProfile Profile
 
 	// Get the username of the user
-	username, err := rt.db.GetUsername(userId)
+	username, err := rt.db.GetUsername(otelctx, userId)
 
 	switch {
 	case errors.Is(err, database.ErrUserNotFound):
@@ -145,7 +152,7 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 	}
 
 	// Get the user photos
-	userPhotos, err := rt.db.GetUserPhotos(userId)
+	userPhotos, err := rt.db.GetUserPhotos(otelctx, userId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't get the user photos")
 		http.Error(w, "Error getting the user photos.", http.StatusInternalServerError)
@@ -158,7 +165,7 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 
 	userProfile.Photos = make([]Photo, len(userPhotos))
 	for i, photo := range userPhotos {
-		likes, comments, err := rt.db.GetPhotoStats(photo.UserId, photo.PhotoId)
+		likes, comments, err := rt.db.GetPhotoStats(otelctx, photo.UserId, photo.PhotoId)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't get the photo stats")
 			http.Error(w, "Error getting the stats of a photo.", http.StatusInternalServerError)
@@ -174,7 +181,7 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 	}
 
 	// Get the other user information
-	userProfile.Uploads, userProfile.Followers, userProfile.Following, err = rt.db.GetUserProfileStats(userId)
+	userProfile.Uploads, userProfile.Followers, userProfile.Following, err = rt.db.GetUserProfileStats(otelctx, userId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't get the user profile stats")
 		http.Error(w, "Error getting the user profile stats.", http.StatusInternalServerError)
@@ -194,6 +201,9 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 
 func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "getMyStreamHandler")
+	defer span.End()
+
 	// Get the parameters
 	var userId int64
 	params, err := checkIds(ps.ByName("userId"))
@@ -210,7 +220,7 @@ func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Check if the user exists
-	exists, err := rt.db.UserExists(userId)
+	exists, err := rt.db.UserExists(otelctx, userId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user exists")
 		http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
@@ -223,7 +233,7 @@ func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps
 	var stream Stream
 
 	// Get the photos of the user stream
-	photos, err := rt.db.GetUserStream(userId)
+	photos, err := rt.db.GetUserStream(otelctx, userId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't get the user stream")
 		http.Error(w, "Error getting the user stream.", http.StatusInternalServerError)
@@ -238,13 +248,13 @@ func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps
 	// Create the stream
 	stream.Stream = make([]Photo, len(photos))
 	for i, photo := range photos {
-		likes, comments, err := rt.db.GetPhotoStats(photo.UserId, photo.PhotoId)
+		likes, comments, err := rt.db.GetPhotoStats(otelctx, photo.UserId, photo.PhotoId)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't get the photo stats")
 			http.Error(w, "Error getting the stats of a photo.", http.StatusInternalServerError)
 			return
 		}
-		username, err := rt.db.GetUsername(photo.UserId)
+		username, err := rt.db.GetUsername(otelctx, photo.UserId)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't get the username")
 			http.Error(w, "Error getting the username of the owner of a photo.", http.StatusInternalServerError)
@@ -273,6 +283,9 @@ func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps
 
 func (rt *_router) getUserByUsernameHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "getUserByUsernameHandler")
+	defer span.End()
+
 	var user User
 
 	// Get the username from the URL
@@ -291,7 +304,7 @@ func (rt *_router) getUserByUsernameHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Get the user id
-	user.UserId, err = rt.db.GetUserId(user.Username)
+	user.UserId, err = rt.db.GetUserId(otelctx, user.Username)
 	if errors.Is(err, database.ErrUserNotFound) {
 		http.Error(w, "User not found.", http.StatusNotFound)
 		return

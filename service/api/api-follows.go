@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/julienschmidt/httprouter"
-	"net/http"
 )
 
 type Follow struct {
@@ -13,6 +14,9 @@ type Follow struct {
 }
 
 func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "followUserHandler")
+	defer span.End()
 
 	// Get the parameters
 	var userId int64
@@ -38,7 +42,7 @@ func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps 
 
 	// Check if both user IDs exist
 	for _, id := range []int64{userId, follow.Followed} {
-		exists, err := rt.db.UserExists(id)
+		exists, err := rt.db.UserExists(otelctx, id)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't check if the user exists")
 			http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
@@ -62,7 +66,7 @@ func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps 
 	}
 
 	// Check if the follow already exists
-	if exists, err := rt.db.FollowExists(follow.Follower, follow.Followed); err != nil {
+	if exists, err := rt.db.FollowExists(otelctx, follow.Follower, follow.Followed); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if follow exists")
 		http.Error(w, "Error checking if the follow exists.", http.StatusInternalServerError)
 		return
@@ -72,7 +76,7 @@ func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps 
 	}
 
 	// Check if the user to follow has banned the user
-	if exists, err := rt.db.BanExists(follow.Followed, follow.Follower); err != nil {
+	if exists, err := rt.db.BanExists(otelctx, follow.Followed, follow.Follower); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user has banned the user")
 		http.Error(w, "Error checking if the followed user has banned the follower user.", http.StatusInternalServerError)
 		return
@@ -82,7 +86,7 @@ func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps 
 	}
 
 	// Try to follow the user
-	if err := rt.db.CreateFollow(follow.Follower, follow.Followed); err != nil {
+	if err := rt.db.CreateFollow(otelctx, follow.Follower, follow.Followed); err != nil {
 		ctx.Logger.WithError(err).Error("can't follow the user")
 		http.Error(w, "Error following the user.", http.StatusInternalServerError)
 		return
@@ -99,6 +103,9 @@ func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps 
 }
 
 func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "unfollowUserHandler")
+	defer span.End()
 
 	// Get the parameters
 	var userId, followedId int64
@@ -118,7 +125,7 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 
 	// Check if both user IDs exist
 	for _, id := range []int64{userId, followedId} {
-		exists, err := rt.db.UserExists(id)
+		exists, err := rt.db.UserExists(otelctx, id)
 		if err != nil {
 			ctx.Logger.WithError(err).Error("can't check if the user exists")
 			http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
@@ -130,7 +137,7 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Check if the user is following the user to unfollow
-	if exists, err := rt.db.FollowExists(userId, followedId); err != nil {
+	if exists, err := rt.db.FollowExists(otelctx, userId, followedId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if follow exists")
 		http.Error(w, "Error checking if the follow exists.", http.StatusInternalServerError)
 		return
@@ -140,7 +147,7 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 	}
 
 	// Try to unfollow the user
-	if err := rt.db.DeleteFollow(userId, followedId); err != nil {
+	if err := rt.db.DeleteFollow(otelctx, userId, followedId); err != nil {
 		ctx.Logger.WithError(err).Error("can't unfollow the user")
 		http.Error(w, "Error unfollowing the user.", http.StatusInternalServerError)
 		return
@@ -150,6 +157,9 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 }
 
 func (rt *_router) checkFollowHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "checkFollowHandler")
+	defer span.End()
 
 	// Get the parameters
 	var userId, followedId int64
@@ -167,7 +177,7 @@ func (rt *_router) checkFollowHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Check if the user is following the user to check
-	exists, err := rt.db.FollowExists(userId, followedId)
+	exists, err := rt.db.FollowExists(otelctx, userId, followedId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if follow exists")
 		http.Error(w, "Error checking if the follow exists.", http.StatusInternalServerError)

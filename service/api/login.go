@@ -13,6 +13,9 @@ import (
 // doLoginHandler is an HTTP handler that returns the
 func (rt *_router) doLoginHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "doLoginHandler")
+	defer span.End()
+
 	// Decode the username from the body of the request
 	var username Username
 	if err := json.NewDecoder(r.Body).Decode(&username); err != nil {
@@ -28,11 +31,11 @@ func (rt *_router) doLoginHandler(w http.ResponseWriter, r *http.Request, ps htt
 
 	// Try to get the user ID from the database
 	var id int64
-	id, err := rt.db.GetUserId(username.Username)
+	id, err := rt.db.GetUserId(otelctx, username.Username)
 	if err != nil {
 		// If the user is not found, create a new user
 		if errors.Is(err, database.ErrUserNotFound) {
-			id, err = rt.db.CreateUser(username.Username)
+			id, err = rt.db.CreateUser(otelctx, username.Username)
 			if err != nil {
 				ctx.Logger.WithError(err).Error("can't create the user")
 				http.Error(w, "Can't create the user.", http.StatusInternalServerError)

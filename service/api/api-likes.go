@@ -15,6 +15,9 @@ type Like struct {
 
 func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "likePhotoHandler")
+	defer span.End()
+
 	// Get the parameters
 	var photoOwner, photoId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId")); err != nil {
@@ -38,7 +41,7 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Check if the photo exists
-	if exists, err := rt.db.PhotoExists(photoOwner, photoId); err != nil {
+	if exists, err := rt.db.PhotoExists(otelctx, photoOwner, photoId); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the photo exists")
 		http.Error(w, "Error checking if the photo exists.", http.StatusInternalServerError)
 		return
@@ -48,7 +51,7 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Check if the user ID of the user who liked the photo exists
-	if exists, err := rt.db.UserExists(like.Liker); err != nil {
+	if exists, err := rt.db.UserExists(otelctx, like.Liker); err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the user exists")
 		http.Error(w, "Error checking if the user exists.", http.StatusInternalServerError)
 		return
@@ -64,7 +67,7 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Check if the user has already liked the photo
-	exists, err := rt.db.LikeExists(like.Photo.OwnerId, like.Photo.PhotoId, like.Liker)
+	exists, err := rt.db.LikeExists(otelctx, like.Photo.OwnerId, like.Photo.PhotoId, like.Liker)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the like exists")
 		http.Error(w, "Error checking if the like exists.", http.StatusInternalServerError)
@@ -75,7 +78,7 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 	}
 
 	// Try to like the photo
-	err = rt.db.CreateLike(like.Photo.OwnerId, like.Photo.PhotoId, like.Liker)
+	err = rt.db.CreateLike(otelctx, like.Photo.OwnerId, like.Photo.PhotoId, like.Liker)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't like the photo")
 		http.Error(w, "Error liking the photo.", http.StatusInternalServerError)
@@ -93,6 +96,9 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 
 func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "unlikePhotoHandler")
+	defer span.End()
+
 	// Get the parameters
 	var photoOwner, photoId, likerId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId"), ps.ByName("likerId")); err != nil {
@@ -109,7 +115,7 @@ func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Check if the like exists
-	exists, err := rt.db.LikeExists(photoOwner, photoId, likerId)
+	exists, err := rt.db.LikeExists(otelctx, photoOwner, photoId, likerId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check if the like exists")
 		http.Error(w, "Error checking if the like exists.", http.StatusInternalServerError)
@@ -120,7 +126,7 @@ func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Try to unlike the photo
-	err = rt.db.DeleteLike(photoOwner, photoId, likerId)
+	err = rt.db.DeleteLike(otelctx, photoOwner, photoId, likerId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't unlike the photo")
 		http.Error(w, "Error unliking the photo.", http.StatusInternalServerError)
@@ -131,6 +137,9 @@ func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 }
 
 func (rt *_router) checkLikeStatusHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
+
+	otelctx, span := tracer.Start(r.Context(), "checkLikeStatusHandler")
+	defer span.End()
 
 	// Get the parameters
 	var photoOwner, photoId, likerId int64
@@ -148,7 +157,7 @@ func (rt *_router) checkLikeStatusHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Check if the user has liked the photo
-	exists, err := rt.db.LikeExists(photoOwner, photoId, likerId)
+	exists, err := rt.db.LikeExists(otelctx, photoOwner, photoId, likerId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't check like status")
 		http.Error(w, "Error checking if the like exists.", http.StatusInternalServerError)

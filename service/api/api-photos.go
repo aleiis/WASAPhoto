@@ -32,6 +32,9 @@ type Photo struct {
 
 func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "uploadPhotoHandler")
+	defer span.End()
+
 	// Get the parameters
 	var userId int64
 	if params, err := checkIds(ps.ByName("userId")); err != nil {
@@ -69,7 +72,7 @@ func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Try to upload the photo
-	err = rt.db.UploadPhoto(userId, img, format)
+	err = rt.db.UploadPhoto(otelctx, userId, img, format)
 	switch {
 	case errors.Is(err, database.ErrUserNotFound):
 		http.Error(w, "User not found.", http.StatusNotFound)
@@ -81,7 +84,7 @@ func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Get the Global Photo ID of the uploaded photo
-	lastUpload, err := rt.db.GetMostRecentPhoto(userId)
+	lastUpload, err := rt.db.GetMostRecentPhoto(otelctx, userId)
 	if err != nil {
 		ctx.Logger.WithError(err).Error("can't get the most recent photo")
 		http.Error(w, "Error getting the global identifier of the uploaded photo.", http.StatusInternalServerError)
@@ -101,6 +104,9 @@ func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps
 
 func (rt *_router) deletePhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "deletePhotoHandler")
+	defer span.End()
+
 	// Get the parameters
 	var userId, photoId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId")); err != nil {
@@ -118,7 +124,7 @@ func (rt *_router) deletePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 
 	// Try to delete the photo
-	if err := rt.db.DeletePhoto(userId, photoId); err != nil {
+	if err := rt.db.DeletePhoto(otelctx, userId, photoId); err != nil {
 		if errors.Is(err, database.ErrPhotoNotFound) {
 			http.Error(w, "Photo not found.", http.StatusNotFound)
 			return
@@ -134,6 +140,9 @@ func (rt *_router) deletePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 
 func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
+	otelctx, span := tracer.Start(r.Context(), "getPhotoHandler")
+	defer span.End()
+
 	// Get the parameters
 	var userId, photoId int64
 	if params, err := checkIds(ps.ByName("userId"), ps.ByName("photoId")); err != nil {
@@ -145,7 +154,7 @@ func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps ht
 
 	// Check if the user requesting the photo is banned by the photo owner
 	// The check is made using the Authorization header
-	banExists, err := checkBan(rt.db, r.Header.Get("Authorization"), userId)
+	banExists, err := checkBan(otelctx, rt.db, r.Header.Get("Authorization"), userId)
 	switch {
 	case errors.Is(err, ErrInvalidBearer):
 		http.Error(w, "Invalid Bearer token.", http.StatusUnauthorized)
@@ -160,7 +169,7 @@ func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps ht
 	}
 
 	// Try to get the path of the photo
-	photoPath, err := rt.db.GetPhotoAbsolutePath(userId, photoId)
+	photoPath, err := rt.db.GetPhotoAbsolutePath(otelctx, userId, photoId)
 	switch {
 	case errors.Is(err, database.ErrPhotoNotFound):
 		http.Error(w, "Photo not found.", http.StatusNotFound)

@@ -42,7 +42,11 @@ import (
 	"github.com/aleiis/WASAPhoto/service/database"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var tracer trace.Tracer = otel.Tracer("WASAPhoto/service/api")
 
 // RouterI is the package API interface representing an API handler builder
 type RouterI interface {

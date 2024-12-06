@@ -44,6 +44,9 @@ type WebAPIConfig struct {
 		WriteTimeout    time.Duration `conf:"default:5s" yaml:"write_timeout"`
 		ShutdownTimeout time.Duration `conf:"default:5s" yaml:"shutdown_timeout"`
 	} `yaml:"web"`
+	OTLP struct {
+		HTTPTraceExporterEndpoint string `conf:"default:localhost:4318" yaml:"http_trace_exporter_endpoint"`
+	} `yaml:"otlp"`
 }
 
 // loadConfig creates a WebAPIConfig starting from flags, environment variables and configuration file.

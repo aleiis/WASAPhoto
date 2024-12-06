@@ -33,3 +33,7 @@ web:
   read_timeout: 5s
   write_timeout: 5s
   shutdown_timeout: 5s
+
+# OTLP Configuration
+otlp:
+  http_trace_exporter_endpoint: "localhost:4318"

@@ -1,49 +1,52 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"image"
 
 	"github.com/aleiis/WASAPhoto/service/config"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type AppDatabaseI interface {
-	GetUserId(username string) (int64, error)
-	CreateUser(username string) (int64, error)
-	UserExists(userId int64) (bool, error)
-	SetUsername(userID int64, newUsername string) error
-	GetUsername(userId int64) (string, error)
-	GetUserProfileStats(userId int64) (int64, int64, int64, error)
-	GetUserStream(userId int64) ([]Photo, error)
+	GetUserId(ctx context.Context, username string) (int64, error)
+	CreateUser(ctx context.Context, username string) (int64, error)
+	UserExists(ctx context.Context, userId int64) (bool, error)
+	SetUsername(ctx context.Context, userID int64, newUsername string) error
+	GetUsername(ctx context.Context, userId int64) (string, error)
+	GetUserProfileStats(ctx context.Context, userId int64) (int64, int64, int64, error)
+	GetUserStream(ctx context.Context, userId int64) ([]Photo, error)
 
-	PhotoExists(userId int64, photoId int64) (bool, error)
-	UploadPhoto(userId int64, img image.Image, format string) error
-	DeletePhoto(userId int64, photoId int64) error
-	GetPhoto(userId int64, photoId int64) (Photo, error)
-	GetUserPhotos(userId int64) ([]Photo, error)
-	GetPhotoStats(userId int64, photoId int64) (int64, int64, error)
-	GetPhotoAbsolutePath(userId int64, photoId int64) (string, error)
-	GetMostRecentPhoto(userId int64) (Photo, error)
+	PhotoExists(ctx context.Context, userId int64, photoId int64) (bool, error)
+	UploadPhoto(ctx context.Context, userId int64, img image.Image, format string) error
+	DeletePhoto(ctx context.Context, userId int64, photoId int64) error
+	GetPhoto(ctx context.Context, userId int64, photoId int64) (Photo, error)
+	GetUserPhotos(ctx context.Context, userId int64) ([]Photo, error)
+	GetPhotoStats(ctx context.Context, userId int64, photoId int64) (int64, int64, error)
+	GetPhotoAbsolutePath(ctx context.Context, userId int64, photoId int64) (string, error)
+	GetMostRecentPhoto(ctx context.Context, userId int64) (Photo, error)
 
-	FollowExists(userId int64, followUserId int64) (bool, error)
-	CreateFollow(userId int64, followUserId int64) error
-	DeleteFollow(userId int64, followUserId int64) error
+	FollowExists(ctx context.Context, userId int64, followUserId int64) (bool, error)
+	CreateFollow(ctx context.Context, userId int64, followUserId int64) error
+	DeleteFollow(ctx context.Context, userId int64, followUserId int64) error
 
-	BanExists(userId int64, bannedUserId int64) (bool, error)
-	CreateBan(userId int64, bannedUserId int64) error
-	DeleteBan(userId int64, bannedUserId int64) error
+	BanExists(ctx context.Context, userId int64, bannedUserId int64) (bool, error)
+	CreateBan(ctx context.Context, userId int64, bannedUserId int64) error
+	DeleteBan(ctx context.Context, userId int64, bannedUserId int64) error
 
-	LikeExists(ownerId int64, photoId int64, userId int64) (bool, error)
-	CreateLike(ownerId int64, photoId int64, userId int64) error
-	DeleteLike(ownerId int64, photoId int64, userId int64) error
+	LikeExists(ctx context.Context, ownerId int64, photoId int64, userId int64) (bool, error)
+	CreateLike(ctx context.Context, ownerId int64, photoId int64, userId int64) error
+	DeleteLike(ctx context.Context, ownerId int64, photoId int64, userId int64) error
 
-	CommentExists(photoOwner int64, photoId int64, commentId int64) (bool, error)
-	CreateComment(photoOwner int64, photoId int64, commentOwner int64, content string) (int64, error)
-	DeleteComment(photoOwner int64, photoId int64, commentId int64) error
-	GetCommentOwner(photoOwner int64, photoId int64, commentId int64) (int64, error)
-	GetPhotoComments(photoOwner int64, photoId int64) ([]Comment, error)
+	CommentExists(ctx context.Context, photoOwner int64, photoId int64, commentId int64) (bool, error)
+	CreateComment(ctx context.Context, photoOwner int64, photoId int64, commentOwner int64, content string) (int64, error)
+	DeleteComment(ctx context.Context, photoOwner int64, photoId int64, commentId int64) error
+	GetCommentOwner(ctx context.Context, photoOwner int64, photoId int64, commentId int64) (int64, error)
+	GetPhotoComments(ctx context.Context, photoOwner int64, photoId int64) ([]Comment, error)
 
 	Ping() error
 }
@@ -52,6 +55,8 @@ type AppDatabase struct {
 	c   *sql.DB
 	dsn string
 }
+
+var tracer trace.Tracer = otel.Tracer("WASAPhoto/service/database")
 
 // New creates a new AppDatabase instance which is a wrapper around the provided database connection that implements the
 // AppDatabaseI interface.
