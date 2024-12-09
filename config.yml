@@ -26,7 +26,7 @@ db:
 
 # The web configuration is used to configure the API service
 web:
-  api_host: "0.0.0.0:3000"
+  api_host: "0.0.0.0:5000"
   debug_host: "0.0.0.0:4000"
   read_timeout: 5s
   write_timeout: 5s

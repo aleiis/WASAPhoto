@@ -7,6 +7,8 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // httpRouterHandler is the signature for functions that accepts a reqcontext.RequestContext in addition to those
@@ -33,6 +35,13 @@ func (rt *_router) wrap(fn httpRouterHandler) func(http.ResponseWriter, *http.Re
 			"path":      r.URL.Path,
 			"remote-ip": r.RemoteAddr,
 		})
+
+		// Extract trace context from the HTTP request headers
+		// The otel propagator will extract the traceparent and tracestate if they exist
+		ctxWithTrace := otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+		// Add the trace context to the request context
+		r = r.WithContext(ctxWithTrace)
 
 		// Call the next handler in chain (usually, the handler function for the path)
 		fn(w, r, ps, ctx)

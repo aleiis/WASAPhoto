@@ -7,7 +7,9 @@ import (
 
 	"github.com/XSAM/otelsql"
 	"github.com/aleiis/WASAPhoto/service/config"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -50,6 +52,8 @@ func newTraceProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exp),
