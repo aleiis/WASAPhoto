@@ -55,9 +55,21 @@ export default {
 			<h2 id="welcome-msg">Welcome, {{ username }}! </h2>
 			<hr style="border: 1px solid #4a4a4a; margin-bottom: 20px; width: 100%;"/>
 			<p v-if="errormsg" id="error-msg">{{ errormsg }}</p>
-			<div v-for="(photo, index) in stream" :key="index" style="margin-bottom: 15px">
-				<PhotoCard :photoOwner="photo.owner.user_id" :photoId="photo.photo_id" :user="photo.owner.username"
-						   :date="photo.date" :likes="photo.total_likes"/>
+			<div v-if="stream && stream.length > 0">
+				<div v-for="(photo, index) in stream" :key="index" style="margin-bottom: 15px">
+					<PhotoCard
+						:photoOwner="photo.owner.user_id"
+						:photoId="photo.photo_id"
+						:user="photo.owner.username"
+						:date="photo.date"
+						:likes="photo.total_likes"
+					/>
+				</div>
+			</div>
+			<!-- Mostrar un mensaje si el stream está vacío -->
+			<div v-else id="empty-stream-container">
+				<img src="/src/assets/logo2.webp" id="empty-stream-logo" />
+				<p id="empty-stream-msg">No stream available. Please check back later.</p>
 			</div>
 		</div>
 	</div>
@@ -87,6 +99,28 @@ export default {
 	font-weight: bold;
 	font-family: Arial, sans-serif;
 	font-size: 14px
+}
+
+/* Estilos para el contenedor del mensaje vacío */
+#empty-stream-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: calc(100vh - 250px); /* Altura del área disponible */
+	text-align: center;
+}
+
+#empty-stream-logo {
+	width: 250px;
+	opacity: 0.5; /* Hace que el logo sea semi-transparente */
+	margin-bottom: 20px; /* Espacio entre el logo y el mensaje */
+}
+
+#empty-stream-msg {
+	font-family: Arial, sans-serif;
+	color: #666;
+	font-size: 16px;
 }
 
 </style>
