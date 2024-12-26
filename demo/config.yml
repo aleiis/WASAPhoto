@@ -1,6 +1,7 @@
 # This is the configuration file for the API service
-# Description of this part is present in the `main.go` file
+# Note: CLI parameters will override the environment, and configuration file will override everything.
 
+# Path to the configuration file
 config_file: "config.yml"
 
 # If a log file is not provided, stdout will be used.

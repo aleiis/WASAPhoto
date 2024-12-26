@@ -37,8 +37,10 @@ export default {
 <template>
 	<header>
 		<div class="header-logo">
-			<img src="/src/assets/logo.png" style="width: 40px; height: 40px;"/>
+			<img src="/src/assets/logo-naudit-retina-normal.png" style="width: auto; height: 40px;"/>
+			<!--
 			<h1>WASAPhoto</h1>
+			-->
 		</div>
 		<div class="header-search">
 			<input type="text" placeholder="Search" v-model="searchBar" @input="onInputUpdate" @keyup.enter="search"/>
