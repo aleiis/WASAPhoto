@@ -1,6 +1,6 @@
 # WASAPhoto
 
-[Web and Software Architecture](http://gamificationlab.uniroma1.it/en/wasa/) homework project.
+Where All Smiles Are Photographed sandbox.
 
 ## Project description
 
@@ -12,13 +12,9 @@ Users will have their profiles. The personal profile page for the user shows: th
 
 A user can login just by specifying the username.
 
-"Fantastic coffee (decaffeinated)" is a simplified version for the WASA course, not suitable for a production environment.
-The full version can be found in the "Fantastic Coffee" repository.
-
 ## Project structure
 
-The project follows the "Fantastic coffee (decaffeinated)" pattern, a simplified version for the WASA course, not suitable for a production environment.
-The full version can be found in the "Fantastic Coffee" repository.
+The project follows the "Fantastic coffee (decaffeinated)" pattern, a simplified version of the "Fantastic Coffee" repository. Not suitable for a production environment.
 
 * `cmd/` contains all executables; Go programs here should only do "executable-stuff", like reading options from the CLI/env, etc.
 	* `cmd/healthcheck` is an example of a daemon for checking the health of servers daemons; useful when the hypervisor is not providing HTTP readiness/liveness probes (e.g., Docker engine)
@@ -26,7 +22,9 @@ The full version can be found in the "Fantastic Coffee" repository.
 * `demo/` contains a demo config file
 * `doc/` contains the documentation (usually, for APIs, this means an OpenAPI file)
 * `service/` has all packages for implementing project-specific functionalities
-	* `service/api` contains an example of an API server
+	* `service/api` contains the API server
+  	* `service/config` contains the configuration module
+  	* `service/database` contains the database logic
 	* `service/globaltime` contains a wrapper package for `time.Time` (useful in unit testing)
 * `vendor/` is managed by Go, and contains a copy of all dependencies
 * `webui/` is an example of a web frontend in Vue.js; it includes:
@@ -84,14 +82,6 @@ If you want to launch the WebUI, open a new tab and launch:
 ./open-npm.sh
 # (here you're inside the NPM container)
 npm run dev
-```
-
-## How to build for production / homework delivery
-
-```shell
-./open-npm.sh
-# (here you're inside the NPM container)
-npm run build-prod
 ```
 
 ## License
