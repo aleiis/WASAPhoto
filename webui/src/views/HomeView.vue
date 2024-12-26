@@ -69,7 +69,7 @@ export default {
 			<!-- Mostrar un mensaje si el stream está vacío -->
 			<div v-else id="empty-stream-container">
 				<img src="/src/assets/logo2.webp" id="empty-stream-logo" />
-				<p id="empty-stream-msg">No stream available. Please check back later.</p>
+				<p id="empty-stream-msg">Your feed is empty. Start following someone to see their posts here!</p>
 			</div>
 		</div>
 	</div>
@@ -101,7 +101,6 @@ export default {
 	font-size: 14px
 }
 
-/* Estilos para el contenedor del mensaje vacío */
 #empty-stream-container {
 	display: flex;
 	flex-direction: column;

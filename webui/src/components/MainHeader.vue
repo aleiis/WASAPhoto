@@ -76,6 +76,7 @@ header {
 	font-family: "PoetsenOne";
 	font-size: 18px;
 	margin-left: 20px;
+	color: #008080;
 }
 
 .header-search {

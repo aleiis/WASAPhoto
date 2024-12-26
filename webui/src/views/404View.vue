@@ -22,7 +22,7 @@
 	padding: 50px;
 	padding-top: 5%;
 	background-color: #f5f5f5;
-	height: calc(100% - 121px);
+	height: calc(100% - 150px);
 	font-family: Arial, Helvetica, sans-serif
 }
 
@@ -42,6 +42,7 @@ img {
 
 h1 {
 	font-family: "PoetsenOne";
+		color: #008080;
 }
 
 button {
