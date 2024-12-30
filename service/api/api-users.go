@@ -9,6 +9,7 @@ import (
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/aleiis/WASAPhoto/service/database"
 	"github.com/julienschmidt/httprouter"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // maxStreamLength is the maximum number of photos that can be returned in a stream
@@ -40,7 +41,7 @@ type Stream struct {
 
 func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "setMyUserNameHandler")
+	otelctx, span := tracer.Start(r.Context(), "setMyUserNameHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -103,7 +104,7 @@ func (rt *_router) setMyUserNameHandler(w http.ResponseWriter, r *http.Request, 
 
 func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "getUserProfileHandler")
+	otelctx, span := tracer.Start(r.Context(), "getUserProfileHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -201,7 +202,7 @@ func (rt *_router) getUserProfileHandler(w http.ResponseWriter, r *http.Request,
 
 func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "getMyStreamHandler")
+	otelctx, span := tracer.Start(r.Context(), "getMyStreamHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -283,7 +284,7 @@ func (rt *_router) getMyStreamHandler(w http.ResponseWriter, r *http.Request, ps
 
 func (rt *_router) getUserByUsernameHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "getUserByUsernameHandler")
+	otelctx, span := tracer.Start(r.Context(), "getUserByUsernameHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	var user User

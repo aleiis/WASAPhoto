@@ -7,6 +7,7 @@ import (
 
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/julienschmidt/httprouter"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const maxCommentCount = 100000
@@ -29,7 +30,7 @@ type PhotoComments struct {
 
 func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "commentPhotoHandler")
+	otelctx, span := tracer.Start(r.Context(), "commentPhotoHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Subspan: Parameter validation
@@ -116,7 +117,7 @@ func (rt *_router) commentPhotoHandler(w http.ResponseWriter, r *http.Request, p
 
 func (rt *_router) uncommentPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "uncommentPhotoHandler")
+	otelctx, span := tracer.Start(r.Context(), "uncommentPhotoHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -165,7 +166,7 @@ func (rt *_router) uncommentPhotoHandler(w http.ResponseWriter, r *http.Request,
 
 func (rt *_router) getCommentsHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "getCommentsHandler")
+	otelctx, span := tracer.Start(r.Context(), "getCommentsHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters

@@ -6,6 +6,7 @@ import (
 
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/julienschmidt/httprouter"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Ban struct {
@@ -15,7 +16,7 @@ type Ban struct {
 
 func (rt *_router) banUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "banUserHandler")
+	otelctx, span := tracer.Start(r.Context(), "banUserHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -95,7 +96,7 @@ func (rt *_router) banUserHandler(w http.ResponseWriter, r *http.Request, ps htt
 
 func (rt *_router) unbanUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "unbanUserHandler")
+	otelctx, span := tracer.Start(r.Context(), "unbanUserHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -150,7 +151,7 @@ func (rt *_router) unbanUserHandler(w http.ResponseWriter, r *http.Request, ps h
 
 func (rt *_router) checkBanHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "checkBanHandler")
+	otelctx, span := tracer.Start(r.Context(), "checkBanHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters

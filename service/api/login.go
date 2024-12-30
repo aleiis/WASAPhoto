@@ -8,12 +8,13 @@ import (
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/aleiis/WASAPhoto/service/database"
 	"github.com/julienschmidt/httprouter"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // doLoginHandler is an HTTP handler that returns the
 func (rt *_router) doLoginHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "doLoginHandler")
+	otelctx, span := tracer.Start(r.Context(), "doLoginHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Decode the username from the body of the request

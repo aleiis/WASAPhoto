@@ -6,6 +6,7 @@ import (
 
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/julienschmidt/httprouter"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Follow struct {
@@ -15,7 +16,7 @@ type Follow struct {
 
 func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "followUserHandler")
+	otelctx, span := tracer.Start(r.Context(), "followUserHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -104,7 +105,7 @@ func (rt *_router) followUserHandler(w http.ResponseWriter, r *http.Request, ps 
 
 func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "unfollowUserHandler")
+	otelctx, span := tracer.Start(r.Context(), "unfollowUserHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -158,7 +159,7 @@ func (rt *_router) unfollowUserHandler(w http.ResponseWriter, r *http.Request, p
 
 func (rt *_router) checkFollowHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "checkFollowHandler")
+	otelctx, span := tracer.Start(r.Context(), "checkFollowHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters

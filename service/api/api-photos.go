@@ -12,6 +12,7 @@ import (
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/aleiis/WASAPhoto/service/database"
 	"github.com/julienschmidt/httprouter"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const ContentTypeJPEG = "image/jpeg"
@@ -32,7 +33,7 @@ type Photo struct {
 
 func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "uploadPhotoHandler")
+	otelctx, span := tracer.Start(r.Context(), "uploadPhotoHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -104,7 +105,7 @@ func (rt *_router) uploadPhotoHandler(w http.ResponseWriter, r *http.Request, ps
 
 func (rt *_router) deletePhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "deletePhotoHandler")
+	otelctx, span := tracer.Start(r.Context(), "deletePhotoHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -140,7 +141,7 @@ func (rt *_router) deletePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 
 func (rt *_router) getPhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "getPhotoHandler")
+	otelctx, span := tracer.Start(r.Context(), "getPhotoHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters

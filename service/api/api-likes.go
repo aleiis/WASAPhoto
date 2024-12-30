@@ -6,6 +6,7 @@ import (
 
 	"github.com/aleiis/WASAPhoto/service/api/reqcontext"
 	"github.com/julienschmidt/httprouter"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Like struct {
@@ -15,7 +16,7 @@ type Like struct {
 
 func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "likePhotoHandler")
+	otelctx, span := tracer.Start(r.Context(), "likePhotoHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -96,7 +97,7 @@ func (rt *_router) likePhotoHandler(w http.ResponseWriter, r *http.Request, ps h
 
 func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "unlikePhotoHandler")
+	otelctx, span := tracer.Start(r.Context(), "unlikePhotoHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
@@ -138,7 +139,7 @@ func (rt *_router) unlikePhotoHandler(w http.ResponseWriter, r *http.Request, ps
 
 func (rt *_router) checkLikeStatusHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params, ctx reqcontext.RequestContext) {
 
-	otelctx, span := tracer.Start(r.Context(), "checkLikeStatusHandler")
+	otelctx, span := tracer.Start(r.Context(), "checkLikeStatusHandler", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	// Get the parameters
